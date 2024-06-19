@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" >
+
+<title>存储结构CSR_CSC | Caton Blog</title>
+
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="shortcut icon" href="https://tong-hao.github.io/favicon.ico?v=1718770967957">
+<link rel="stylesheet" href="https://tong-hao.github.io/styles/main.css">
+
+
+
+<link rel="stylesheet" href="https://unpkg.com/aos@next/dist/aos.css" />
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+
+
+
+    <meta name="description" content="
+图的存储介质：内存、外存
+图的存储方式：邻接矩阵、邻接表、CSR/CSC
+
+一张图
+
+邻接矩阵表示方法
+
+邻接表表示方法
+
+CSR/CSC
+
+
+
+计算出边数量
+通过offset计算出边的数量以及出边的位置：比如顶点3，offset[3] ..." />
+    <meta name="keywords" content="存储结构,图计算" />
+  </head>
+  <body>
+    <div id="app" class="main">
+
+      <div class="sidebar" :class="{ 'full-height': menuVisible }">
+  <div class="top-container" data-aos="fade-right">
+    <div class="top-header-container">
+      <a class="site-title-container" href="https://tong-hao.github.io">
+        <img src="https://tong-hao.github.io/images/avatar.png?v=1718770967957" class="site-logo">
+        <h1 class="site-title">Caton Blog</h1>
+      </a>
+      <div class="menu-btn" @click="menuVisible = !menuVisible">
+        <div class="line"></div>
+      </div>
+    </div>
+    <div>
+      
+        
+          <a href="/" class="site-nav">
+            首页
+          </a>
+        
+      
+        
+          <a href="/archives" class="site-nav">
+            归档
+          </a>
+        
+      
+        
+          <a href="/tags" class="site-nav">
+            标签
+          </a>
+        
+      
+        
+          <a href="/about" class="site-nav">
+            关于
+          </a>
+        
+      
+        
+          <a href="/db" class="site-nav">
+            #数据库内核
+          </a>
+        
+      
+        
+          <a href="/graph-computer/" class="site-nav">
+            #图计算
+          </a>
+        
+      
+        
+          <a href="/graph-db" class="site-nav">
+            #图数据库
+          </a>
+        
+      
+        
+          <a href="/pg" class="site-nav">
+            #postgresql
+          </a>
+        
+      
+    </div>
+  </div>
+  <div class="bottom-container" data-aos="flip-up" data-aos-offset="0">
+    <div class="social-container">
+      
+        
+          <a class="social-link" href="https://github.com/tong-hao" target="_blank">
+            <i class="fab fa-github"></i>
+          </a>
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    </div>
+    <div class="site-description">
+      ✍️一个专注于数据库的博客
+    </div>
+    <div class="site-footer">
+       | <a class="rss" href="https://tong-hao.github.io/atom.xml" target="_blank">RSS</a>
+    </div>
+  </div>
+</div>
+
+
+      <div class="main-container">
+        <div class="content-container" data-aos="fade-up">
+          <div class="post-detail">
+            <h2 class="post-title">存储结构CSR_CSC</h2>
+            <div class="post-date">2024-06-01</div>
+            
+            <div class="post-content" v-pre>
+              <ul>
+<li>图的存储介质：内存、外存</li>
+<li>图的存储方式：邻接矩阵、邻接表、CSR/CSC</li>
+</ul>
+<h2 id="一张图">一张图</h2>
+<figure data-type="image" tabindex="1"><img src="https://tong-hao.github.io/post-images/1717209976222.webp" alt="" loading="lazy"></figure>
+<h2 id="邻接矩阵表示方法">邻接矩阵表示方法</h2>
+<figure data-type="image" tabindex="2"><img src="https://tong-hao.github.io/post-images/1717209991108.webp" alt="" loading="lazy"></figure>
+<h2 id="邻接表表示方法">邻接表表示方法</h2>
+<figure data-type="image" tabindex="3"><img src="https://tong-hao.github.io/post-images/1717210008479.webp" alt="" loading="lazy"></figure>
+<h2 id="csrcsc">CSR/CSC</h2>
+<figure data-type="image" tabindex="4"><img src="https://tong-hao.github.io/post-images/1717210030022.webp" alt="" loading="lazy"></figure>
+<ol>
+<li>
+<p>计算出边数量<br>
+通过offset计算出边的数量以及出边的位置：比如顶点3，<code>offset[3] - offset[2] = 8 - 6 = 2 </code>表示顶点3有两条出边，</p>
+</li>
+<li>
+<p>获取邻居<br>
+通过nbrs计算出边的邻居：顶点3的邻居为 <code>nbrs[offset[2]] 到 nbrs[offset[3]] </code>为出边【左闭右开】</p>
+</li>
+<li>
+<p>获取权重<br>
+通过weights计算边上的权重：顶点3的邻居权重为<code> weights[offset[2]] 到 nbrs[offset[3]]</code>【左闭右开】</p>
+</li>
+</ol>
+<h2 id="plato中的csr">plato中的csr</h2>
+<p><code>bcsr.hpp</code></p>
+<pre><code>  std::shared_ptr&lt;bitmap_spec_t&gt; bitmap_;
+  std::shared_ptr&lt;adj_unit_spec_t&gt; adjs_;
+  std::shared_ptr&lt;eid_t&gt; index_;
+</code></pre>
+
+            </div>
+            
+              <div class="tag-container">
+                
+                  <a href="https://tong-hao.github.io/Eo_zQ9ryw/" class="tag">
+                    存储结构
+                  </a>
+                
+                  <a href="https://tong-hao.github.io/graph-computer/" class="tag">
+                    图计算
+                  </a>
+                
+              </div>
+            
+            
+              <div class="next-post">
+                <div class="next">下一篇</div>
+                <a href="https://tong-hao.github.io/oA8AcYhNi/">
+                  <h3 class="post-title">
+                    pg学习资料
+                  </h3>
+                </a>
+              </div>
+            
+
+            
+
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <script src="https://unpkg.com/aos@next/dist/aos.js"></script>
+<script type="application/javascript">
+
+AOS.init();
+
+var app = new Vue({
+  el: '#app',
+  data: {
+    menuVisible: false,
+  },
+})
+
+</script>
+
+
+  <script src="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.5.1/build/highlight.min.js"></script>
+  <script>
+    hljs.initHighlightingOnLoad()
+  </script>
+
+
+
+
+
+  </body>
+</html>

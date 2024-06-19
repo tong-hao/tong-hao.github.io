@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" >
+
+<title>pg中的HOT | Caton Blog</title>
+
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="shortcut icon" href="https://tong-hao.github.io/favicon.ico?v=1718770967957">
+<link rel="stylesheet" href="https://tong-hao.github.io/styles/main.css">
+
+
+
+<link rel="stylesheet" href="https://unpkg.com/aos@next/dist/aos.css" />
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+
+
+
+    <meta name="description" content="什么是HOT
+
+HOT的全称是Heap Only Tuple
+HOT是pg 8.3版本实现的功能
+它可以有效解决索引和表在更新时候的效率
+并且能够减少VACUUM工作量
+
+没有HOT的情况
+
+（图1）
+假设有一张表，并且这张表创建了索引。
+..." />
+    <meta name="keywords" content="postgresql" />
+  </head>
+  <body>
+    <div id="app" class="main">
+
+      <div class="sidebar" :class="{ 'full-height': menuVisible }">
+  <div class="top-container" data-aos="fade-right">
+    <div class="top-header-container">
+      <a class="site-title-container" href="https://tong-hao.github.io">
+        <img src="https://tong-hao.github.io/images/avatar.png?v=1718770967957" class="site-logo">
+        <h1 class="site-title">Caton Blog</h1>
+      </a>
+      <div class="menu-btn" @click="menuVisible = !menuVisible">
+        <div class="line"></div>
+      </div>
+    </div>
+    <div>
+      
+        
+          <a href="/" class="site-nav">
+            首页
+          </a>
+        
+      
+        
+          <a href="/archives" class="site-nav">
+            归档
+          </a>
+        
+      
+        
+          <a href="/tags" class="site-nav">
+            标签
+          </a>
+        
+      
+        
+          <a href="/about" class="site-nav">
+            关于
+          </a>
+        
+      
+        
+          <a href="/db" class="site-nav">
+            #数据库内核
+          </a>
+        
+      
+        
+          <a href="/graph-computer/" class="site-nav">
+            #图计算
+          </a>
+        
+      
+        
+          <a href="/graph-db" class="site-nav">
+            #图数据库
+          </a>
+        
+      
+        
+          <a href="/pg" class="site-nav">
+            #postgresql
+          </a>
+        
+      
+    </div>
+  </div>
+  <div class="bottom-container" data-aos="flip-up" data-aos-offset="0">
+    <div class="social-container">
+      
+        
+          <a class="social-link" href="https://github.com/tong-hao" target="_blank">
+            <i class="fab fa-github"></i>
+          </a>
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    </div>
+    <div class="site-description">
+      ✍️一个专注于数据库的博客
+    </div>
+    <div class="site-footer">
+       | <a class="rss" href="https://tong-hao.github.io/atom.xml" target="_blank">RSS</a>
+    </div>
+  </div>
+</div>
+
+
+      <div class="main-container">
+        <div class="content-container" data-aos="fade-up">
+          <div class="post-detail">
+            <h2 class="post-title">pg中的HOT</h2>
+            <div class="post-date">2024-06-03</div>
+            
+            <div class="post-content" v-pre>
+              <h2 id="什么是hot">什么是HOT</h2>
+<ul>
+<li>HOT的全称是Heap Only Tuple</li>
+<li>HOT是pg 8.3版本实现的功能</li>
+<li>它可以有效解决索引和表在更新时候的效率</li>
+<li>并且能够减少VACUUM工作量</li>
+</ul>
+<h2 id="没有hot的情况">没有HOT的情况</h2>
+<p><img src="https://tong-hao.github.io/post-images/1717418976343.webp" alt="" loading="lazy"><br>
+（图1）</p>
+<p>假设有一张表，并且这张表创建了索引。<br>
+当我们对一条记录执行update的时候，需要先对原数据标记为删除，再增加一条记录。<br>
+在图b中，我们可以看到索引增加了一条记录，并且索引指向的表数据也增加了一条记录。</p>
+<h2 id="含有hot的情况">含有HOT的情况</h2>
+<p><img src="https://tong-hao.github.io/post-images/1717419000193.webp" alt="" loading="lazy"><br>
+（图2）</p>
+<p><img src="https://tong-hao.github.io/post-images/1717419013607.webp" alt="" loading="lazy"><br>
+（图3）</p>
+<p>在HOT技术背景下，update一条记录时，索引数据不做改动，表数据需要做如下改动：</p>
+<ul>
+<li>修改原数据的t_xmax、t_ctid、t_infomast2</li>
+<li>新增一条新数据</li>
+<li>注意，原数据的t_infomast2为HEAP_HOT_UPDATED标记，新数据的t_infomast2为HEAP_ONLY_TUPLE标记</li>
+</ul>
+<p><strong>这样存在一个问题</strong>，见图2，通过索引访问这条数据时，需要先把Tuple_1读出来，再根据Tuple_1中的t_ctid信息读取Tuple_2。存在的问题：</p>
+<ul>
+<li>读取Tuple_1，读取Tuple_2，开销太大</li>
+<li>如果Tuple_1被清理后，不能通过索引读取到Tuple_2</li>
+</ul>
+<p><strong>如何解决这个问题？</strong><br>
+<img src="https://tong-hao.github.io/post-images/1717419027025.webp" alt="" loading="lazy"><br>
+这个问题比较好解决，让line pointer1指向line pointer2，这样就少读一次Tuple_1。即使Tuple_1被清理，也不影响Tuple_2的读取。</p>
+<h2 id="哪些情况是不能hot">哪些情况是不能HOT</h2>
+<p><img src="https://tong-hao.github.io/post-images/1717419039792.webp" alt="" loading="lazy"><br>
+（图4）</p>
+<ul>
+<li>情况1: 更新时，原记录对应的page满了，就必须把新记录放入另外一个page，见图a。</li>
+<li>情况2: 更新的字段刚好是索引字段，不能使用HOT，见图b。</li>
+</ul>
+
+            </div>
+            
+              <div class="tag-container">
+                
+                  <a href="https://tong-hao.github.io/pg/" class="tag">
+                    postgresql
+                  </a>
+                
+              </div>
+            
+            
+              <div class="next-post">
+                <div class="next">下一篇</div>
+                <a href="https://tong-hao.github.io/c7kagpphr/">
+                  <h3 class="post-title">
+                    WAL
+                  </h3>
+                </a>
+              </div>
+            
+
+            
+
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <script src="https://unpkg.com/aos@next/dist/aos.js"></script>
+<script type="application/javascript">
+
+AOS.init();
+
+var app = new Vue({
+  el: '#app',
+  data: {
+    menuVisible: false,
+  },
+})
+
+</script>
+
+
+  <script src="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.5.1/build/highlight.min.js"></script>
+  <script>
+    hljs.initHighlightingOnLoad()
+  </script>
+
+
+
+
+
+  </body>
+</html>

@@ -1,0 +1,378 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+    <id>https://tong-hao.github.io</id>
+    <title>Caton Blog</title>
+    <updated>2024-06-19T04:22:54.843Z</updated>
+    <generator>https://github.com/jpmonette/feed</generator>
+    <link rel="alternate" href="https://tong-hao.github.io"/>
+    <link rel="self" href="https://tong-hao.github.io/atom.xml"/>
+    <subtitle>✍️一个专注于数据库的博客</subtitle>
+    <logo>https://tong-hao.github.io/images/avatar.png</logo>
+    <icon>https://tong-hao.github.io/favicon.ico</icon>
+    <rights>All rights reserved 2024, Caton Blog</rights>
+    <entry>
+        <title type="html"><![CDATA[pg-代码-事务ID回绕问题]]></title>
+        <id>https://tong-hao.github.io/BlvUamky8/</id>
+        <link href="https://tong-hao.github.io/BlvUamky8/">
+        </link>
+        <updated>2024-06-19T04:19:17.000Z</updated>
+        <content type="html"><![CDATA[<p>pg为了减少存储空间，将事务ID设置为uint32。但是如果数据量超过40亿就会出问题，无法比较事务的先后。<br>
+为了解决这个问题，pg提供了<code>TransactionIdPrecedes</code>函数进行判断事务的先后。</p>
+<p>代码如下：</p>
+<pre><code class="language-c">#include &lt;iostream&gt;
+
+using TransactionId = uint32_t;
+using int32 = int32_t;
+
+bool TransactionIdIsNormal(TransactionId id) {
+	return id &gt;= 3;
+}
+
+bool TransactionIdPrecedes(TransactionId id1, TransactionId id2) {
+	/*
+	 * If either ID is a permanent XID then we can just do unsigned
+	 * comparison.	If both are normal, do a modulo-2^31 comparison.
+	 */
+	int32 diff;
+
+	if (!TransactionIdIsNormal(id1) || !TransactionIdIsNormal(id2))
+		return (id1 &lt; id2);
+
+	diff = (int32)(id1 - id2);
+	return (diff &lt; 0);
+}
+
+int main() {
+	TransactionId id = (1 &lt;&lt; 31) + 1000000;
+	std::cout &lt;&lt; TransactionIdPrecedes(11, 100) &lt;&lt; std::endl;  // true
+	std::cout &lt;&lt; TransactionIdPrecedes(11, id)
+	          &lt;&lt; std::endl;  // false, 因为 11 - （2^31+1000000)
+	                         // 会超过int32的范围，会回绕。 得到的结果是一个正数
+	std::cout &lt;&lt; TransactionIdPrecedes(1, id) &lt;&lt; std::endl;
+	return 0;
+}
+</code></pre>
+<ul>
+<li><code>TransactionIdPrecedes</code> 函数是pg中的代码，用于判断事务id1是否先于id2</li>
+<li>关键代码 <code>diff = (int32)(id1 - id2);</code> 如果 <code>id1 - id2</code> 不在 int32的范围<code>[-2^32, 2^32-1]</code> 范围就会进行回绕。比如：2^31+100 转成int32 就会是负数。</li>
+</ul>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[pg-堆文件结构]]></title>
+        <id>https://tong-hao.github.io/W2MNdGp8Q/</id>
+        <link href="https://tong-hao.github.io/W2MNdGp8Q/">
+        </link>
+        <updated>2024-06-12T03:19:56.000Z</updated>
+        <content type="html"><![CDATA[<figure data-type="image" tabindex="1"><img src="https://tong-hao.github.io/post-images/1718162437367.webp" alt="" loading="lazy"></figure>
+<ul>
+<li>一个数据文件（heap table, index, free space map, and visibility map）是可以分成多个page</li>
+<li>每个page默认是8 KB</li>
+<li>每个page有个block numbers，从0开始</li>
+<li>每个page包含了3种类型的数据
+<ul>
+<li>header</li>
+<li>line pointer，每个pointer是4个字节，是个偏移量，指向tuples</li>
+<li>heap tuples</li>
+</ul>
+</li>
+<li>PageHeaderData结构</li>
+</ul>
+<pre><code>typedef struct PageHeaderData @src/include/storage/bufpage.h
+      {
+        /* XXX LSN is member of *any* block, not only page-organized ones */
+        PageXLogRecPtr       pd_lsn;      /* LSN: next byte after last byte of xlog
+                                           * record for last change to this page */
+        uint16                pd_checksum; /* checksum */
+        uint16                pd_flags;    /* flag bits, see below */
+        LocationIndex         pd_lower;    /* offset to start of free space */
+        LocationIndex         pd_upper;    /* offset to end of free space */
+        LocationIndex         pd_special;  /* offset to start of special space */
+        uint16                pd_pagesize_version;
+        TransactionId         pd_prune_xid;/* oldest prunable XID, or zero if none */
+        ItemIdData            pd_linp[1];  /* beginning of line pointer array */
+      } PageHeaderData;
+      typedef PageHeaderData *PageHeader;
+      typedef uint64 XLogRecPtr;
+
+</code></pre>
+<h2 id="page-header信息">page header信息</h2>
+<ul>
+<li><code>pd_lower</code>和<code>pd_upper</code> 用于记录空闲空间，随着记录的添加，<code>pd_lower</code>向后移动，<code>pd_upper</code> 则向前移动，空闲空间会越来越少。</li>
+<li><code>pd_lsn</code>：最后一次修改该页的日志序列号。</li>
+<li><code>pd_checksum</code>：该页的校验和。</li>
+<li><code>pd_flags</code>：标志位，指示页的状态。如：PD_PAGE_FULL表示页面已经满了，PD_HAS_FREE_LINES 表示有空闲空间</li>
+<li><code>pd_pagesize_version</code>：页面大小和版本信息。</li>
+<li><code>pd_prune_xid</code>：上次修剪（prune）操作的事务ID。</li>
+</ul>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[pg-Streaming Replication是如何工作的]]></title>
+        <id>https://tong-hao.github.io/KKOnYswxx/</id>
+        <link href="https://tong-hao.github.io/KKOnYswxx/">
+        </link>
+        <updated>2024-06-11T07:03:53.000Z</updated>
+        <content type="html"><![CDATA[<ul>
+<li>同步流复制是9.1版本实现的</li>
+<li>它是一主多从架构，数据从主数据库中复制到从数据库中</li>
+</ul>
+<h2 id="启动流程">启动流程</h2>
+<figure data-type="image" tabindex="1"><img src="https://tong-hao.github.io/post-images/1718089448479.png" alt="" loading="lazy"></figure>
+<ol>
+<li>分别启动 主从数据库</li>
+<li>从数据库启动 <code>startup</code> 进程</li>
+<li>从数据库启动 <code>walreceiver</code> 进程</li>
+<li><code>walreceiver</code> 进程 发送请求给主数据库，如果主数据库没有运行，则定期重试</li>
+<li>当主数据库收到请求后，启动一个<code>walsender</code> 进程，然后二者建立TCP连接</li>
+<li><code>walreceiver</code> 进程将自己最新的LSN发送给<code>walsender</code> 进程</li>
+<li>在<code>walsender</code> 进程中，如果 <code>walreceiver</code> 进程中的LSN小于 <code>walsender</code> 进程，则发送缺少的WAL数据。这个过程叫做catch-up</li>
+</ol>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[什么是PITR]]></title>
+        <id>https://tong-hao.github.io/YryCleMsS/</id>
+        <link href="https://tong-hao.github.io/YryCleMsS/">
+        </link>
+        <updated>2024-06-11T07:03:13.000Z</updated>
+        <content type="html"><![CDATA[<!-- more -->
+<ul>
+<li>PITR 全称 Point-in-Time Recovery</li>
+<li>是在8.0版本中实现的</li>
+<li>它利用<code>base backup</code> 和 归档日志，可以恢复数据库到任意一个时间点</li>
+<li>在数据库底层存储出现错误的时候，可以使用这个功能进行数据恢复</li>
+</ul>
+<h2 id="什么是base-backup">什么是Base Backup</h2>
+<ul>
+<li>在线数据库备份分为逻辑备份和物理备份。</li>
+<li>逻辑备份有个缺点，备份和恢复时间长</li>
+<li>物理备份要比逻辑备份快很多</li>
+<li>base backup是全量的物理备份</li>
+<li>base backup过程：
+<ul>
+<li>执行<code>pg_backup_start</code></li>
+<li>打snapshot</li>
+<li>执行<code>pg_backup_stop</code></li>
+</ul>
+</li>
+<li>base backup 更简单的方法是执行<code>pg_basebackup</code><br>
+<img src="https://tong-hao.github.io/post-images/1718089414732.png" alt="" loading="lazy"></li>
+</ul>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[pg-WAL的管理]]></title>
+        <id>https://tong-hao.github.io/Rm1cm3S0n/</id>
+        <link href="https://tong-hao.github.io/Rm1cm3S0n/">
+        </link>
+        <updated>2024-06-11T07:02:37.000Z</updated>
+        <content type="html"><![CDATA[<h2 id="wal文件管理">WAL文件管理</h2>
+<ul>
+<li>checkpoint进程启动时，会评估WAL文件的数量
+<ul>
+<li>配置项：min_wal_size 和 max_wal_size</li>
+</ul>
+</li>
+<li>同时会清除无用的WAL文件
+<ul>
+<li>会将最后一个REDO point记录之前的文件<strong>回收掉</strong></li>
+<li>并没有真正的删除，而是重复利用</li>
+</ul>
+</li>
+</ul>
+<figure data-type="image" tabindex="1"><img src="https://tong-hao.github.io/post-images/1718089376535.png" alt="" loading="lazy"></figure>
+<h2 id="wal文件何时切换">WAL文件何时切换？</h2>
+<ul>
+<li>WAL文件写到一定的大小</li>
+<li>手动触发：<code>pg_switch_xlog</code>被执行</li>
+<li>配置项：<code>archive_timeout</code></li>
+</ul>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[pg-数据库恢复处理]]></title>
+        <id>https://tong-hao.github.io/UKIT1Izsb/</id>
+        <link href="https://tong-hao.github.io/UKIT1Izsb/">
+        </link>
+        <updated>2024-06-11T07:02:01.000Z</updated>
+        <content type="html"><![CDATA[<h2 id="数据库恢复过程">数据库恢复过程</h2>
+<figure data-type="image" tabindex="1"><img src="https://tong-hao.github.io/post-images/1718089340330.png" alt="" loading="lazy"></figure>
+<ol>
+<li>读取pg_control文件，如果state为 <code>in production</code> 进入恢复模式，如果state为<code>shut down</code> 则正常启动</li>
+<li>进入恢复模式后，pg从pg_control文件中读取checkpoint记录的位置，然后从WAL文件中读取到REDO point记录。从REDO point位置开始恢复数据</li>
+<li>按顺序回放xlog记录</li>
+</ol>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[pg-checkpoint]]></title>
+        <id>https://tong-hao.github.io/byTQWb3Cn/</id>
+        <link href="https://tong-hao.github.io/byTQWb3Cn/">
+        </link>
+        <updated>2024-06-11T07:01:18.000Z</updated>
+        <content type="html"><![CDATA[<h2 id="checkpoint">checkpoint</h2>
+<ul>
+<li>数据恢复需要从某个位置恢复到当前的状态。这个位置就是checkpoint记录。</li>
+<li>有个checkpointer进程，它会定期地在WAL中写一个checkpoint记录，当恢复的时候就从最近的一次位置恢复。</li>
+</ul>
+<h2 id="checkpoint进程的作用">checkpoint进程的作用</h2>
+<ul>
+<li>用于数据库的恢复准备</li>
+<li>刷脏</li>
+</ul>
+<h2 id="checkpoint过程">checkpoint过程</h2>
+<figure data-type="image" tabindex="1"><img src="https://tong-hao.github.io/post-images/1718089307778.png" alt="" loading="lazy"></figure>
+<ol>
+<li>在WAL buffer中，写入一个REDO point，实际上是一条XLOG记录。在数据库恢复的时候，会从这条记录开始恢复。</li>
+<li>在WAL buffer中，写入一个checkpoint记录（xlog记录）</li>
+<li>将缓存中的clog记录刷到存储中</li>
+<li>将脏页刷到存储中</li>
+<li>更新 pg_control文件中</li>
+</ol>
+<h2 id="checkpoint触发时机">checkpoint触发时机</h2>
+<ul>
+<li>定期触发，配置项为<code>checkpoint_timeout</code></li>
+<li>检查WAL文件数量</li>
+<li>检查WAL文件大小</li>
+<li>pg系统停止（smart/fast模式下）</li>
+<li>手动执行checkpoint命令</li>
+</ul>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[pg-WAL的写入过程]]></title>
+        <id>https://tong-hao.github.io/Jghwb3GT5/</id>
+        <link href="https://tong-hao.github.io/Jghwb3GT5/">
+        </link>
+        <updated>2024-06-11T07:00:39.000Z</updated>
+        <content type="html"><![CDATA[<h2 id="wal写入过程">WAL写入过程</h2>
+<p>下面是WAL写入过程的伪代码：</p>
+<pre><code class="language-c++">exec_simple_query() @postgres.c
+      (1) ExtendCLOG() @clog.c                  /* Write the state of this transaction
+                                                 * &quot;IN_PROGRESS&quot; to the CLOG.
+                                                 */
+      (2) heap_insert()@heapam.c                /* Insert a tuple, creates a XLOG record,
+                                                 * and invoke the function XLogInsert.
+                                                 */
+      (3)   XLogInsert() @xloginsert.c (9.4 or earlier, xlog.c)
+                                                /* Write the XLOG record of the inserted tuple
+                                                 *  to the WAL buffer, and update page's pd_lsn.
+                                                 */
+      (4) finish_xact_command() @postgres.c     /* Invoke commit action.*/   
+            XLogInsert() @xloginsert.c (9.4 or earlier, xlog.c)
+                                                /* Write a XLOG record of this commit action 
+                                                 * to the WAL buffer.
+                                                 */
+      (5)   XLogWrite() @xloginsert.c (9.4 or earlier, xlog.c)
+                                                /* Write and flush all XLOG records on
+                                                 * the WAL buffer to WAL segment.
+                                                 */
+      (6) TransactionIdCommitTree() @transam.c  /* Change the state of this transaction 
+                                                 * from &quot;IN_PROGRESS&quot; to &quot;COMMITTED&quot;
+                                                 * on the CLOG.
+                                                 */
+</code></pre>
+<ol>
+<li>ExtendCLOG() 会写入一个‘IN_PROGRESS’状态到clog buffer中</li>
+<li>heap_insert() 插入tuple到对应的page中，同时创建XLOG记录</li>
+<li>XLogInsert() 将XLOG记录写入WAL buffer中，同时更新page中的lsn</li>
+<li>finish_xact_command() 会发起commit，会调用XLogInsert() 插入一个commit XLOG记录到WAL buffer中</li>
+<li>XLogWrite() 会将在WAL buffer中的XLOG记录刷新到WAL文件中</li>
+<li>finish_xact_command()  会写入一个‘COMMITTED’状态到clog中</li>
+</ol>
+<h2 id="wal进程">WAL进程</h2>
+<ul>
+<li>WAL进程会定期的检查WAL buffer，将xlog记录写入到wal文件中。避免大量的数据在commit时候写文件产生的瓶颈问题。</li>
+<li>时间间隔通过参数wal_writer_delay控制</li>
+</ul>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[pg-WAL的结构]]></title>
+        <id>https://tong-hao.github.io/zu96T1a5o/</id>
+        <link href="https://tong-hao.github.io/zu96T1a5o/">
+        </link>
+        <updated>2024-06-11T06:57:53.000Z</updated>
+        <content type="html"><![CDATA[<h2 id="外部结构">外部结构</h2>
+<ul>
+<li>事务日志是无限长的，事务日志被存储在WAL文件中，每个文件的大小是16M</li>
+<li>每个WAL文件的命名是有规则的：<img src="https://tong-hao.github.io/post-images/1718089116091.png" alt="" loading="lazy">
+<ul>
+<li>timelineId是一个4字节的int</li>
+<li>LSN是什么？TODO</li>
+</ul>
+</li>
+</ul>
+<h2 id="内部结构">内部结构</h2>
+<h3 id="wal文件内部">WAL文件内部</h3>
+<figure data-type="image" tabindex="1"><img src="https://tong-hao.github.io/post-images/1718089193358.png" alt="" loading="lazy"></figure>
+<ul>
+<li>WAL的16M被分割成8KB一个page</li>
+<li>第一个page的头是<code>XLogLongPageHeaderData</code> 结构</li>
+<li>后续的page的头是 <code>XLogPageHeaderData</code>，见 <code>src/include/access/xlog_internal.h</code>。</li>
+<li>每个page除了头外，还有N个XLOG record</li>
+</ul>
+<h3 id="xlog的内部">XLOG的内部</h3>
+<p>9.5版本之后的xlog内部结构图：<br>
+<img src="https://tong-hao.github.io/post-images/1718089210072.png" alt="" loading="lazy"></p>
+<ul>
+<li>xlog内部是由 头部+数据部 构成的。</li>
+<li>数据部 又分为了 header part 和 data part</li>
+<li>header part 和 data part 是一一对应的</li>
+</ul>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[pg-什么是WAL]]></title>
+        <id>https://tong-hao.github.io/tY92Cg08y/</id>
+        <link href="https://tong-hao.github.io/tY92Cg08y/">
+        </link>
+        <updated>2024-06-11T03:00:20.000Z</updated>
+        <content type="html"><![CDATA[<ul>
+<li>WAL 全称是 Write-Ahead Logging，预写日志</li>
+<li>写WAL的目的：当数据库发生崩溃时，可以根据WAL数据将系统恢复到一致的状态。</li>
+<li>WAL是pg在7.1版本加入的功能</li>
+</ul>
+<h2 id="不写wal的例子">不写WAL的例子</h2>
+<figure data-type="image" tabindex="1"><img src="https://tong-hao.github.io/post-images/1718074885257.png" alt="" loading="lazy"></figure>
+<ul>
+<li>当执行第一个insert时，先将表A的数据从表文件加载到buffer pool中，然后插入到buffer pool中的一个合适的页里</li>
+<li>当执行第二条insert时，还是直接插入到buffer pool中</li>
+<li>当机器停电的时候，我们插入的两条记录就会丢失。因为它并没有保存到磁盘里。</li>
+</ul>
+<h2 id="checkpoint">checkpoint</h2>
+<ul>
+<li>数据恢复需要从某个位置恢复到当前的状态。这个位置就是checkpoint记录。</li>
+<li>有个checkpointer进程，它会定期地在WAL中写一个checkpoint记录，当恢复的时候就从最近的一次位置恢复。</li>
+</ul>
+<h2 id="wal的写入过程">WAL的写入过程</h2>
+<p>pg会将我们的操作记录到一个文件中，在pg中，这个文件是xlog。当系统崩溃的时候，可以从xlog中恢复之前操作记录。这里的操作包括：insert，delete，commit。当事务commit/abort的时候会立即写入到xlog中。</p>
+<p>下面是一个例子：<br>
+<img src="https://tong-hao.github.io/post-images/1718074865585.png" alt="" loading="lazy"></p>
+<ol>
+<li>checkpointer进程在xlog文件中写了一条checkpoint记录</li>
+<li>执行insert语句时，pg会先从表文件中将page加载到buffer pool中，然后在buffer pool的某个page中插入一条记录，再在WAL buffer中写入一条xlog记录</li>
+<li>当执行<code>commit</code>的时候，pg会将commit操作写入到WAL buffer中，然后将WAL buffer中的所有xlog记录写到WAL文件中。</li>
+<li>再次执行insert语句，如同2</li>
+<li>再次执行commit语句，如同3</li>
+<li>当系统crash时，所有的insert都已经保存到了wal文件里</li>
+</ol>
+<h2 id="数据恢复过程">数据恢复过程</h2>
+<figure data-type="image" tabindex="2"><img src="https://tong-hao.github.io/post-images/1718074851230.png" alt="" loading="lazy"></figure>
+<ol>
+<li>从表文件中将page加载到buffer pool里。</li>
+<li>从WAL文件中读取xlog记录，并与表文件page中的LSN做做比较。
+<ul>
+<li>如果xlog的LSN大，则将它插入到buffer pool的page中</li>
+<li>如果xlog的LSN小，则不做任何事情</li>
+</ul>
+</li>
+<li>重复步骤2。<br>
+上面这个过程叫日志回放。</li>
+</ol>
+<p>注意：<br>
+pg只支持redo log，不支持undo log。</p>
+]]></content>
+    </entry>
+</feed>

@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" >
+
+<title>pg-vacuum的冻结处理 | Caton Blog</title>
+
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="shortcut icon" href="https://tong-hao.github.io/favicon.ico?v=1718770967957">
+<link rel="stylesheet" href="https://tong-hao.github.io/styles/main.css">
+
+
+
+<link rel="stylesheet" href="https://unpkg.com/aos@next/dist/aos.css" />
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+
+
+
+    <meta name="description" content="
+冻结分为两种模式：lazy mode和eager mode
+
+lazy mode 对比 eager mode
+
+lazy mode使用的是lazy vacuum
+lazy vacuum运行时会扫描每个page上的dead tuple
+ea..." />
+    <meta name="keywords" content="postgresql" />
+  </head>
+  <body>
+    <div id="app" class="main">
+
+      <div class="sidebar" :class="{ 'full-height': menuVisible }">
+  <div class="top-container" data-aos="fade-right">
+    <div class="top-header-container">
+      <a class="site-title-container" href="https://tong-hao.github.io">
+        <img src="https://tong-hao.github.io/images/avatar.png?v=1718770967957" class="site-logo">
+        <h1 class="site-title">Caton Blog</h1>
+      </a>
+      <div class="menu-btn" @click="menuVisible = !menuVisible">
+        <div class="line"></div>
+      </div>
+    </div>
+    <div>
+      
+        
+          <a href="/" class="site-nav">
+            首页
+          </a>
+        
+      
+        
+          <a href="/archives" class="site-nav">
+            归档
+          </a>
+        
+      
+        
+          <a href="/tags" class="site-nav">
+            标签
+          </a>
+        
+      
+        
+          <a href="/about" class="site-nav">
+            关于
+          </a>
+        
+      
+        
+          <a href="/db" class="site-nav">
+            #数据库内核
+          </a>
+        
+      
+        
+          <a href="/graph-computer/" class="site-nav">
+            #图计算
+          </a>
+        
+      
+        
+          <a href="/graph-db" class="site-nav">
+            #图数据库
+          </a>
+        
+      
+        
+          <a href="/pg" class="site-nav">
+            #postgresql
+          </a>
+        
+      
+    </div>
+  </div>
+  <div class="bottom-container" data-aos="flip-up" data-aos-offset="0">
+    <div class="social-container">
+      
+        
+          <a class="social-link" href="https://github.com/tong-hao" target="_blank">
+            <i class="fab fa-github"></i>
+          </a>
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    </div>
+    <div class="site-description">
+      ✍️一个专注于数据库的博客
+    </div>
+    <div class="site-footer">
+       | <a class="rss" href="https://tong-hao.github.io/atom.xml" target="_blank">RSS</a>
+    </div>
+  </div>
+</div>
+
+
+      <div class="main-container">
+        <div class="content-container" data-aos="fade-up">
+          <div class="post-detail">
+            <h2 class="post-title">pg-vacuum的冻结处理</h2>
+            <div class="post-date">2024-06-11</div>
+            
+            <div class="post-content" v-pre>
+              <ul>
+<li>冻结分为两种模式：lazy mode和eager mode</li>
+</ul>
+<h2 id="lazy-mode-对比-eager-mode">lazy mode 对比 eager mode</h2>
+<ul>
+<li>lazy mode使用的是lazy vacuum</li>
+<li>lazy vacuum运行时会扫描每个page上的dead tuple</li>
+<li>eager mode会扫描所有page，不管page中是否包含dead tuple。</li>
+</ul>
+<h2 id="lazy-mode的过程">lazy mode的过程</h2>
+<p>在开始时，会计算出 freezeLimit_txid 和 冻结的tuple。冻结的tuple是t_xmin小于freezeLimit_txid的tuple。</p>
+<p>freezeLimit_txid 值为 <code>OldestXmin - vacuum_freeze_min_age</code>。<br>
+OldestXmin 是 正在运行的事务中最早的txid。<br>
+vacuum_freeze_min_age 是在配置文件中配置的，默认值为50000000。</p>
+<h3 id="通过一个例子来理解整个过程">通过一个例子来理解整个过程</h3>
+<p><img src="https://tong-hao.github.io/post-images/1718074076726.webp" alt="" loading="lazy"><br>
+（图1）</p>
+<ul>
+<li>OldestXmin是50,002,500</li>
+<li>vacuum_freeze_min_age 配置的是 50000000</li>
+<li>freezeLimit_txid则为2500</li>
+<li>检查每个表的每个page
+<ul>
+<li>page-0：
+<ul>
+<li>检查vm，存在dead tuple，继续。</li>
+<li>三条记录的t_xmin都小于freezeLimit_txid，所以冻结这3条记录，其中tuple1会被清理掉。</li>
+</ul>
+</li>
+<li>page-1:
+<ul>
+<li>检查vm，发现不存在dead tuple，所以跳过</li>
+</ul>
+</li>
+<li>page-2:
+<ul>
+<li>检查vm，存在dead tuple，继续。</li>
+<li>tuple7和8的t_xmin都小于freezeLimit_txid，被冻结</li>
+<li>tuple7会被清理掉</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>更新统计信息
+<ul>
+<li>pg_stat_all_tables中的 n_live_tup, n_dead_tup, last_vacuum, vacuum_count等。</li>
+</ul>
+</li>
+</ul>
+<h2 id="eager-mode">eager mode</h2>
+<h3 id="执行条件">执行条件</h3>
+<p><code>pg_database.datfrozenxid &lt; (OldestXmin - vacuum_freeze_table_age)</code></p>
+<ul>
+<li>pg_database.datfrozenxid - 初始值为1821</li>
+<li>OldestXmin 是 正在运行的事务中最早的txid。</li>
+<li>vacuum_freeze_table_age是一个配置值，默认为150,000,000</li>
+</ul>
+<h3 id="通过一个例子理解整个过程">通过一个例子理解整个过程</h3>
+<p><img src="https://tong-hao.github.io/post-images/1718074093962.webp" alt="" loading="lazy"><br>
+（图2）</p>
+<ul>
+<li>pg_database.datfrozenxid为1821</li>
+<li>OldestXmin 为150,002,000</li>
+<li>freezeLimit_txid is 100,002,000</li>
+<li>vacuum_freeze_table_age是 150,000,000</li>
+<li><code>1821 &lt; (150,002,000 - 150,000,000)</code>， 所以条件满足</li>
+<li>检查每个table的每个page
+<ul>
+<li>page-0:
+<ul>
+<li>检查t_informask，两条记录均是冻结状态，所以跳过</li>
+</ul>
+</li>
+<li>page-1:
+<ul>
+<li>检查t_xmin，t_xmin 小于freezeLimit_txid的三条记录均被冻结</li>
+</ul>
+</li>
+<li>page-2:
+<ul>
+<li>检查t_xmin， tuple10会被冻结，tuple11不会被冻结。</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<p><strong>问题：</strong> page-0中所有的tuple是冻结的，但是还是scan了所有的数据。<br>
+<strong>优化：</strong> 在9.6版本中，如果page中的所有tuple均是冻结状态，会在vm文件中记录1，否则记录为0，见图3。</p>
+<p><img src="https://tong-hao.github.io/post-images/1718074109492.webp" alt="" loading="lazy"><br>
+（图3）</p>
+
+            </div>
+            
+              <div class="tag-container">
+                
+                  <a href="https://tong-hao.github.io/pg/" class="tag">
+                    postgresql
+                  </a>
+                
+              </div>
+            
+            
+              <div class="next-post">
+                <div class="next">下一篇</div>
+                <a href="https://tong-hao.github.io/TPf7uoY40/">
+                  <h3 class="post-title">
+                    pg-visibility map
+                  </h3>
+                </a>
+              </div>
+            
+
+            
+
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <script src="https://unpkg.com/aos@next/dist/aos.js"></script>
+<script type="application/javascript">
+
+AOS.init();
+
+var app = new Vue({
+  el: '#app',
+  data: {
+    menuVisible: false,
+  },
+})
+
+</script>
+
+
+  <script src="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.5.1/build/highlight.min.js"></script>
+  <script>
+    hljs.initHighlightingOnLoad()
+  </script>
+
+
+
+
+
+  </body>
+</html>

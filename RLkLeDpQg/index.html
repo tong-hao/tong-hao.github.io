@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" >
+
+<title>Raft一致性协议 | Caton Blog</title>
+
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="shortcut icon" href="https://tong-hao.github.io/favicon.ico?v=1718770967957">
+<link rel="stylesheet" href="https://tong-hao.github.io/styles/main.css">
+
+
+
+<link rel="stylesheet" href="https://unpkg.com/aos@next/dist/aos.css" />
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+
+
+
+    <meta name="description" content="简短总结
+角色以及角色之间的转换
+raft有三种角色：
+
+leader
+candidate
+follower
+
+follower-&gt;candidate : 长时间没有收到leader的心跳
+candidate-&gt;leader: ..." />
+    <meta name="keywords" content="数据库,算法" />
+  </head>
+  <body>
+    <div id="app" class="main">
+
+      <div class="sidebar" :class="{ 'full-height': menuVisible }">
+  <div class="top-container" data-aos="fade-right">
+    <div class="top-header-container">
+      <a class="site-title-container" href="https://tong-hao.github.io">
+        <img src="https://tong-hao.github.io/images/avatar.png?v=1718770967957" class="site-logo">
+        <h1 class="site-title">Caton Blog</h1>
+      </a>
+      <div class="menu-btn" @click="menuVisible = !menuVisible">
+        <div class="line"></div>
+      </div>
+    </div>
+    <div>
+      
+        
+          <a href="/" class="site-nav">
+            首页
+          </a>
+        
+      
+        
+          <a href="/archives" class="site-nav">
+            归档
+          </a>
+        
+      
+        
+          <a href="/tags" class="site-nav">
+            标签
+          </a>
+        
+      
+        
+          <a href="/about" class="site-nav">
+            关于
+          </a>
+        
+      
+        
+          <a href="/db" class="site-nav">
+            #数据库内核
+          </a>
+        
+      
+        
+          <a href="/graph-computer/" class="site-nav">
+            #图计算
+          </a>
+        
+      
+        
+          <a href="/graph-db" class="site-nav">
+            #图数据库
+          </a>
+        
+      
+        
+          <a href="/pg" class="site-nav">
+            #postgresql
+          </a>
+        
+      
+    </div>
+  </div>
+  <div class="bottom-container" data-aos="flip-up" data-aos-offset="0">
+    <div class="social-container">
+      
+        
+          <a class="social-link" href="https://github.com/tong-hao" target="_blank">
+            <i class="fab fa-github"></i>
+          </a>
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    </div>
+    <div class="site-description">
+      ✍️一个专注于数据库的博客
+    </div>
+    <div class="site-footer">
+       | <a class="rss" href="https://tong-hao.github.io/atom.xml" target="_blank">RSS</a>
+    </div>
+  </div>
+</div>
+
+
+      <div class="main-container">
+        <div class="content-container" data-aos="fade-up">
+          <div class="post-detail">
+            <h2 class="post-title">Raft一致性协议</h2>
+            <div class="post-date">2024-06-01</div>
+            
+            <div class="post-content" v-pre>
+              <h2 id="简短总结">简短总结</h2>
+<h3 id="角色以及角色之间的转换">角色以及角色之间的转换</h3>
+<p>raft有三种角色：</p>
+<ul>
+<li>leader</li>
+<li>candidate</li>
+<li>follower</li>
+</ul>
+<p>follower-&gt;candidate : 长时间没有收到leader的心跳<br>
+candidate-&gt;leader: 收到一半以上的投票<br>
+candidate/leader-&gt;follower: response中term id比自己的高</p>
+<h3 id="选主">选主</h3>
+<p>1）follower-&gt;candidate : 长时间没有收到leader的心跳<br>
+2）candidate-&gt;leader: 收到一半以上的投票</p>
+<h3 id="处理客户端请求">处理客户端请求</h3>
+<p>1）leader 收到客户端请求后，保存到日志中<br>
+2）leader 将日志复制给follower<br>
+3）如果一多半复制成功，则回复客户端</p>
+<hr>
+<h2 id="1-raft是什么">1 Raft是什么？</h2>
+<p>Raft是一致性协议算法。<br>
+比如我们有三台机器，A、B、C。为了让数据一致，其中一个作为Leader，其他两个作为Follower，Leader向Follower发送自己的数据，从而让Follower与Leader的数据保持一致。</p>
+<h2 id="2-名词">2 名词</h2>
+<ul>
+<li>Election timeout // 选举超时时间</li>
+<li>Request vote RPC // Leader选举的请求</li>
+<li>Leader 选举 // 如果选举超时时间到了 还没有收到Leader选举的请求，自己就开始向所有人发起Request vote RPC。</li>
+<li>Term值 //选举超时时间到了后将自己的Term+1</li>
+<li>赞成票</li>
+<li>反对票</li>
+<li>心跳消息 // Leader向Follower发送心跳消息。</li>
+<li>心跳超时时间 // 如果超过了心跳超时时间，就会发起新的一轮Leader竞选</li>
+<li>投票分裂</li>
+<li>Log Replication // 日志复制</li>
+</ul>
+<h2 id="3-角色">3 角色</h2>
+<ul>
+<li>Leader</li>
+<li>Follower</li>
+<li>Candidate （候选者）</li>
+</ul>
+<h2 id="4-竞选leader的过程">4 竞选Leader的过程</h2>
+<p>1）每个节点都有个随机时长的竞选超时时间，比如：A为100ms，B为150ms，C为200ms。<br>
+2）A的Term首先到期，则他成为Candidate，然后向B和C发送<code>竞选Leader的请求</code>。<br>
+3）A如果收到多数机器的数量的赞成票，就成为了Leader<br>
+4）Leader要定期的向Follower发送心跳消息。<br>
+5）如果Follower收不到Leader的心跳，就会成为Candidate，然后向其他机器发送竞选。</p>
+<h2 id="5-重新选举过程">5 重新选举过程</h2>
+<p>1）Leader宕机了<br>
+2）过了心跳超时时间，Follower收不到心跳后会发起新的一轮Leader竞选<br>
+3）（后面与<code>竞选Leader的过程</code>一样）</p>
+<h2 id="6-投票分裂情况">6 投票分裂情况</h2>
+<ul>
+<li>比如5个节点：s1,s2,s3,s4,s5</li>
+<li>s1 宕机了，s2 和 s3 同时成为了Candidator，自己先给自己投了一票</li>
+<li>s4 投s2赞成票，投s3反对票。</li>
+<li>s5 投s3赞成票，投s2反对票。</li>
+<li>s2 和 s3 都收到了2票，所以投票分裂。</li>
+</ul>
+<p>如何避免raft的投票分裂问题？</p>
+<h2 id="7-raft日志复制过程">7 Raft日志复制过程</h2>
+<p>1）S1作为Leader，先在本地写入日志，此时的日志是未提交状态。<br>
+<img src="https://tong-hao.github.io/post-images/1717210333105.webp" alt="" loading="lazy"></p>
+<p>2）S1会向所有的Follower发送日志复制消息<br>
+<img src="https://tong-hao.github.io/post-images/1717210349235.webp" alt="" loading="lazy"></p>
+<p>3）当有半数以上的日志复制成功，S1则将自己的日志状态改为已提交状态。<br>
+随后，再向Follower发送日志状态更新的消息。<br>
+<img src="https://tong-hao.github.io/post-images/1717210366727.webp" alt="" loading="lazy"></p>
+<h2 id="8-修复不一致日志的过程">8 修复不一致日志的过程</h2>
+<p>1）S1写入了2个未提交的日志后宕机<br>
+<img src="https://tong-hao.github.io/post-images/1717210379936.webp" alt="" loading="lazy"></p>
+<p>2）S2成为了Leader。成为Leader的第一件事情就是初始化所有节点的next index，让所有节点的next index都和自己保持一致。<br>
+然后S2要做一致性检查，检查的内容是next index的前一个位置的内容是否和自己一致。<br>
+明显S3的答复是一致的，S4的答复是不一致的，S5是宕机状态没有答复。<br>
+<img src="https://tong-hao.github.io/post-images/1717210391280.webp" alt="" loading="lazy"></p>
+<p>3）针对S4的不一致，S2要求检查index为2的位置是否一致，如果还不一致，要求检查index1的位置是否一致，直到一致为止。<br>
+<img src="https://tong-hao.github.io/post-images/1717210408918.webp" alt="" loading="lazy"></p>
+<p>4）然后给S4复制日志<br>
+<img src="https://tong-hao.github.io/post-images/1717210422864.webp" alt="" loading="lazy"></p>
+<p>5）S1恢复，S2要给S1做一致性检查。首先检查index=3的日志是否一致，<br>
+<img src="https://tong-hao.github.io/post-images/1717210435004.webp" alt="" loading="lazy"></p>
+<p>6）<br>
+注意：小圆点移动到index=3的位置<br>
+然后检查index=4的位置，不一致。由于raft是强一致性算法，S2会强制覆盖index=4的日志<br>
+<img src="https://tong-hao.github.io/post-images/1717210450081.webp" alt="" loading="lazy"></p>
+<p>7）日志完全一致<br>
+<img src="https://tong-hao.github.io/post-images/1717210462440.webp" alt="" loading="lazy"></p>
+<h2 id="9-raft算法的安全性">9 raft算法的安全性</h2>
+<ul>
+<li>S5节点恢复的同时S2挂了，并且S5率先成为了候选者。S5会成为Leader吗？</li>
+<li>如果S5成为Leader，必定会将其他节点的日志删除，因为raft是Leader强一致性算法。</li>
+<li>S5不会成为Leader，因为发起Request vote 时候会检查term或index，如果候选者比自己的小，则拒绝。</li>
+<li>先比较term值，如果term值相同再比较index值。</li>
+</ul>
+<h2 id="10-关于term任期">10 关于Term（任期）</h2>
+<ul>
+<li>Term是一个数字</li>
+<li>如果率先成为Candidator，就将自己的Term+1</li>
+<li>如果成为了Leader，就将自己的Term发送给Follower</li>
+<li>如果Candidator或Leader发现自己的Term比别人的小，则退为Follower</li>
+<li>如果节点收到的Term比自己小，直接拒绝请求。</li>
+</ul>
+<h2 id="11-关于投票原则">11 关于投票原则</h2>
+<ul>
+<li>谁先来，票就先投给谁</li>
+<li>收到大多数票才能成为leader</li>
+</ul>
+
+            </div>
+            
+              <div class="tag-container">
+                
+                  <a href="https://tong-hao.github.io/db/" class="tag">
+                    数据库
+                  </a>
+                
+                  <a href="https://tong-hao.github.io/algo/" class="tag">
+                    算法
+                  </a>
+                
+              </div>
+            
+            
+              <div class="next-post">
+                <div class="next">下一篇</div>
+                <a href="https://tong-hao.github.io/mrElY8CRQ/">
+                  <h3 class="post-title">
+                    plato系统的pull与push模式
+                  </h3>
+                </a>
+              </div>
+            
+
+            
+
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <script src="https://unpkg.com/aos@next/dist/aos.js"></script>
+<script type="application/javascript">
+
+AOS.init();
+
+var app = new Vue({
+  el: '#app',
+  data: {
+    menuVisible: false,
+  },
+})
+
+</script>
+
+
+  <script src="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.5.1/build/highlight.min.js"></script>
+  <script>
+    hljs.initHighlightingOnLoad()
+  </script>
+
+
+
+
+
+  </body>
+</html>

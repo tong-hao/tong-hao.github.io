@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" >
+
+<title>tidb | Caton Blog</title>
+
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="shortcut icon" href="https://tong-hao.github.io/favicon.ico?v=1718770967957">
+<link rel="stylesheet" href="https://tong-hao.github.io/styles/main.css">
+
+
+
+<link rel="stylesheet" href="https://unpkg.com/aos@next/dist/aos.css" />
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+
+
+
+    <meta name="description" content="使用
+参考：https://docs.pingcap.com/tidb/stable/quick-start-with-tidb
+架构
+整体架构
+
+
+三个核心组件：storage层（TiKV、TiFlash），PD，Engine层（Sql ..." />
+    <meta name="keywords" content="数据库" />
+  </head>
+  <body>
+    <div id="app" class="main">
+
+      <div class="sidebar" :class="{ 'full-height': menuVisible }">
+  <div class="top-container" data-aos="fade-right">
+    <div class="top-header-container">
+      <a class="site-title-container" href="https://tong-hao.github.io">
+        <img src="https://tong-hao.github.io/images/avatar.png?v=1718770967957" class="site-logo">
+        <h1 class="site-title">Caton Blog</h1>
+      </a>
+      <div class="menu-btn" @click="menuVisible = !menuVisible">
+        <div class="line"></div>
+      </div>
+    </div>
+    <div>
+      
+        
+          <a href="/" class="site-nav">
+            首页
+          </a>
+        
+      
+        
+          <a href="/archives" class="site-nav">
+            归档
+          </a>
+        
+      
+        
+          <a href="/tags" class="site-nav">
+            标签
+          </a>
+        
+      
+        
+          <a href="/about" class="site-nav">
+            关于
+          </a>
+        
+      
+        
+          <a href="/db" class="site-nav">
+            #数据库内核
+          </a>
+        
+      
+        
+          <a href="/graph-computer/" class="site-nav">
+            #图计算
+          </a>
+        
+      
+        
+          <a href="/graph-db" class="site-nav">
+            #图数据库
+          </a>
+        
+      
+        
+          <a href="/pg" class="site-nav">
+            #postgresql
+          </a>
+        
+      
+    </div>
+  </div>
+  <div class="bottom-container" data-aos="flip-up" data-aos-offset="0">
+    <div class="social-container">
+      
+        
+          <a class="social-link" href="https://github.com/tong-hao" target="_blank">
+            <i class="fab fa-github"></i>
+          </a>
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    </div>
+    <div class="site-description">
+      ✍️一个专注于数据库的博客
+    </div>
+    <div class="site-footer">
+       | <a class="rss" href="https://tong-hao.github.io/atom.xml" target="_blank">RSS</a>
+    </div>
+  </div>
+</div>
+
+
+      <div class="main-container">
+        <div class="content-container" data-aos="fade-up">
+          <div class="post-detail">
+            <h2 class="post-title">tidb</h2>
+            <div class="post-date">2024-06-01</div>
+            
+            <div class="post-content" v-pre>
+              <h2 id="使用">使用</h2>
+<p>参考：https://docs.pingcap.com/tidb/stable/quick-start-with-tidb</p>
+<h2 id="架构">架构</h2>
+<h3 id="整体架构">整体架构</h3>
+<figure data-type="image" tabindex="1"><img src="https://tong-hao.github.io/post-images/1717210764251.webp" alt="" loading="lazy"></figure>
+<ul>
+<li>三个核心组件：storage层（TiKV、TiFlash），PD，Engine层（Sql engine和TiSpark）</li>
+<li>TiSpark
+<ul>
+<li>在<code>Spark-&gt;TiSpark-&gt;TiKV/TiFlash</code>中承担中介，TiSpark将底层的数据暴漏给上层的Spark。</li>
+</ul>
+</li>
+<li>PD
+<ul>
+<li>管理region</li>
+<li>提供每个key的物理位置和region。一个region是一个key段。</li>
+<li>timestamp oracle</li>
+</ul>
+</li>
+<li>TiKV
+<ul>
+<li>TiKV 由多个tikv server组成</li>
+<li>tikv server在raft中是一个leader或者follower</li>
+<li>tikv server的底层是rocksdb</li>
+</ul>
+</li>
+</ul>
+<h3 id="行存转列存">行存转列存</h3>
+<figure data-type="image" tabindex="2"><img src="https://tong-hao.github.io/post-images/1717210775698.webp" alt="" loading="lazy"></figure>
+<ul>
+<li>tidb支持HTAP，靠的是两份数据，一份行存，一份列存。</li>
+<li>在原有的raft角色（leader、follower）基础上增加了learner，learner可以复制leader的日志，保存为列存。</li>
+<li>这样支持三种scan：Index scan、row scan、column scan</li>
+<li>对OLAP类型的算子，优化起 通过<code>column scan</code></li>
+</ul>
+<h2 id="存储格式">存储格式</h2>
+<h3 id="tuple">Tuple</h3>
+<pre><code>Key:{table{tableID}_record{rowID}} 
+Value: {col0, col1, col2, col3}
+</code></pre>
+<h3 id="index">Index</h3>
+<p>unique key index:</p>
+<pre><code>Key: {table{tableID}_index{indexID}_indexedColValue} 
+Value: {rowID} 
+</code></pre>
+<p>nonunique key index:</p>
+<pre><code>Key: {table{tableID}_index{indexID}_indexedColValue_rowID} 
+Value: {null}
+</code></pre>
+
+            </div>
+            
+              <div class="tag-container">
+                
+                  <a href="https://tong-hao.github.io/db/" class="tag">
+                    数据库
+                  </a>
+                
+              </div>
+            
+            
+              <div class="next-post">
+                <div class="next">下一篇</div>
+                <a href="https://tong-hao.github.io/CaaxzVZ6A/">
+                  <h3 class="post-title">
+                    sql的执行过程
+                  </h3>
+                </a>
+              </div>
+            
+
+            
+
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <script src="https://unpkg.com/aos@next/dist/aos.js"></script>
+<script type="application/javascript">
+
+AOS.init();
+
+var app = new Vue({
+  el: '#app',
+  data: {
+    menuVisible: false,
+  },
+})
+
+</script>
+
+
+  <script src="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.5.1/build/highlight.min.js"></script>
+  <script>
+    hljs.initHighlightingOnLoad()
+  </script>
+
+
+
+
+
+  </body>
+</html>
