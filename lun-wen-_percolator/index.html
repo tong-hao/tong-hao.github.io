@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" >
+
+<title>论文_percolator | Caton Blog</title>
+
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="shortcut icon" href="https://tong-hao.github.io/favicon.ico?v=1721368774787">
+<link rel="stylesheet" href="https://tong-hao.github.io/styles/main.css">
+
+
+
+<link rel="stylesheet" href="https://unpkg.com/aos@next/dist/aos.css" />
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+
+
+
+    <meta name="description" content="背景
+
+Percolator在google内部用于搜索页面的处理。由于传统的MapRedurce处理模型过于沉重，在处理小数据和大批量的计算时效率不高，所以发明了Percolator。
+Percolator相比MR，效率提升了50%。
+Pe..." />
+    <meta name="keywords" content="数据库,论文" />
+  </head>
+  <body>
+    <div id="app" class="main">
+
+      <div class="sidebar" :class="{ 'full-height': menuVisible }">
+  <div class="top-container" data-aos="fade-right">
+    <div class="top-header-container">
+      <a class="site-title-container" href="https://tong-hao.github.io">
+        <img src="https://tong-hao.github.io/images/avatar.png?v=1721368774787" class="site-logo">
+        <h1 class="site-title">Caton Blog</h1>
+      </a>
+      <div class="menu-btn" @click="menuVisible = !menuVisible">
+        <div class="line"></div>
+      </div>
+    </div>
+    <div>
+      
+        
+          <a href="/" class="site-nav">
+            首页
+          </a>
+        
+      
+        
+          <a href="/archives" class="site-nav">
+            归档
+          </a>
+        
+      
+        
+          <a href="/tags" class="site-nav">
+            标签
+          </a>
+        
+      
+        
+          <a href="/about" class="site-nav">
+            关于
+          </a>
+        
+      
+        
+          <a href="/doris" class="site-nav">
+            #doris
+          </a>
+        
+      
+        
+          <a href="/pg" class="site-nav">
+            #postgresql
+          </a>
+        
+      
+        
+          <a href="/db" class="site-nav">
+            #数据库内核
+          </a>
+        
+      
+        
+          <a href="/graph-computer/" class="site-nav">
+            #图计算
+          </a>
+        
+      
+        
+          <a href="/graph-db" class="site-nav">
+            #图数据库
+          </a>
+        
+      
+    </div>
+  </div>
+  <div class="bottom-container" data-aos="flip-up" data-aos-offset="0">
+    <div class="social-container">
+      
+        
+          <a class="social-link" href="https://github.com/tong-hao" target="_blank">
+            <i class="fab fa-github"></i>
+          </a>
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    </div>
+    <div class="site-description">
+      ✍️一个专注于数据库的博客
+    </div>
+    <div class="site-footer">
+       | <a class="rss" href="https://tong-hao.github.io/atom.xml" target="_blank">RSS</a>
+    </div>
+  </div>
+</div>
+
+
+      <div class="main-container">
+        <div class="content-container" data-aos="fade-up">
+          <div class="post-detail">
+            <h2 class="post-title">论文_percolator</h2>
+            <div class="post-date">2024-06-01</div>
+            
+            <div class="post-content" v-pre>
+              <h2 id="背景">背景</h2>
+<ul>
+<li>Percolator在google内部用于搜索页面的处理。由于传统的MapRedurce处理模型过于沉重，在处理小数据和大批量的计算时效率不高，所以发明了Percolator。</li>
+<li>Percolator相比MR，效率提升了50%。</li>
+<li>Percolator提供ACID事务、提供observers（pieces of code）。</li>
+</ul>
+<h2 id="percolator架构">Percolator架构</h2>
+<ul>
+<li>a Percolator worker<br>
+<code>invokes observers to read/write Bigtable.</code></li>
+<li>a Bigtable<br>
+<code>consists of a collection of tablet servers. A table store a collection of SST-files.</code></li>
+<li>a GFS chunkserver</li>
+<li>a timestamp oracle</li>
+<li>a lightweight lock service</li>
+</ul>
+<h2 id="percolator存储格式">Percolator存储格式</h2>
+<pre><code>Column Use
+-------------
+c:lock   An uncommitted transaction is writing this cell; contains the location of primary lock 
+c:write  Committed data present; stores the Bigtable timestamp of the data
+c:data   Stores the data itself
+c:notify  Hint: observers may need to run
+c:ack_O   Observer “O” has run ; stores start timestamp of successful last run
+
+</code></pre>
+<ul>
+<li>lock_cf: {key,start_ts}=&gt;{primary_key,locktype}</li>
+<li>data_cf: {key,start_ts}=&gt;{value}</li>
+<li>write_cf: {key,commit_ts}=&gt;{start_ts}</li>
+</ul>
+<h2 id="percolator两阶段提交">Percolator两阶段提交</h2>
+<p>阶段一：</p>
+<ol>
+<li>从timestamp oracle服务中获取start_ts</li>
+<li>随机选取一个key作为primary, 其他的为secondary</li>
+<li>write-write锁检查：从write_cf中读取当前key的数据，如果 commit_ts &gt;= strat_ts 则说明事务存在冲突，返回WriteConflict错误；</li>
+<li>key_cf检查：如果存在数据，返回KeyIsLock的错误</li>
+<li>写数据<br>
+key_cf:<br>
+lock_cf:<br>
+data_cf:</li>
+</ol>
+<p>阶段二：<br>
+注意：一旦primary节点提交成功后，整个事务就算提交成功了。</p>
+<ol>
+<li>向primary key所在的节点发请求
+<ul>
+<li>先检查lock_cf中的数据 {primary_key,start_ts}</li>
+<li>写入write_cf {primary_key,commit_ts}=&gt;{start_ts}</li>
+<li>删除lock_cf</li>
+</ul>
+</li>
+<li>向secondary key所在的节点发送请求
+<ul>
+<li>先检查lock_cf中的数据 {当前key,start_ts}</li>
+<li>写入write_cf {当前key,commit_ts}=&gt;{start_ts}</li>
+<li>删除lock_cf</li>
+</ul>
+</li>
+</ol>
+<h2 id="percolator优缺点">Percolator优缺点</h2>
+<h3 id="缺点">缺点</h3>
+<ul>
+<li>读取性能不好 <code>因为写的时候先写primary 再写secondary。 如果写secondary时间长，会导致读等待。</code></li>
+<li>写性能问题 <code>写的时候要写多列，并且需要两阶段提交；如果commit阶段出了问题，会造成其他参与者不能写入锁，需要依赖锁清理机制。</code></li>
+</ul>
+<h2 id="参考">参考</h2>
+<ul>
+<li>论文《Large-scale Incremental Processing Using Distributed Transactions and Notifications》</li>
+<li>《Google Percolator事务》 https://zhuanlan.zhihu.com/p/53197633</li>
+<li>《Google Percolator 事务模型的利弊分析》 https://zhuanlan.zhihu.com/p/59115828</li>
+<li>《为什么 percolator 的事务两阶段提交不需要 Coordinator？》 https://www.zhihu.com/question/300050882/answer/518833781</li>
+</ul>
+
+            </div>
+            
+              <div class="tag-container">
+                
+                  <a href="https://tong-hao.github.io/db/" class="tag">
+                    数据库
+                  </a>
+                
+                  <a href="https://tong-hao.github.io/paper/" class="tag">
+                    论文
+                  </a>
+                
+              </div>
+            
+            
+              <div class="next-post">
+                <div class="next">下一篇</div>
+                <a href="https://tong-hao.github.io/lun-wen-_livegraph/">
+                  <h3 class="post-title">
+                    论文_LiveGraph
+                  </h3>
+                </a>
+              </div>
+            
+
+            
+
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <script src="https://unpkg.com/aos@next/dist/aos.js"></script>
+<script type="application/javascript">
+
+AOS.init();
+
+var app = new Vue({
+  el: '#app',
+  data: {
+    menuVisible: false,
+  },
+})
+
+</script>
+
+
+  <script src="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.5.1/build/highlight.min.js"></script>
+  <script>
+    hljs.initHighlightingOnLoad()
+  </script>
+
+
+
+
+
+  </body>
+</html>

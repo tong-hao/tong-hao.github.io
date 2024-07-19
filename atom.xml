@@ -1,0 +1,481 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+    <id>https://tong-hao.github.io</id>
+    <title>Caton Blog</title>
+    <updated>2024-07-19T06:00:59.538Z</updated>
+    <generator>https://github.com/jpmonette/feed</generator>
+    <link rel="alternate" href="https://tong-hao.github.io"/>
+    <link rel="self" href="https://tong-hao.github.io/atom.xml"/>
+    <subtitle>✍️一个专注于数据库的博客</subtitle>
+    <logo>https://tong-hao.github.io/images/avatar.png</logo>
+    <icon>https://tong-hao.github.io/favicon.ico</icon>
+    <rights>All rights reserved 2024, Caton Blog</rights>
+    <entry>
+        <title type="html"><![CDATA[doris-元数据]]></title>
+        <id>https://tong-hao.github.io/DyEPF8x6a/</id>
+        <link href="https://tong-hao.github.io/DyEPF8x6a/">
+        </link>
+        <updated>2024-07-19T05:47:00.000Z</updated>
+        <content type="html"><![CDATA[<h2 id="元数据目录">元数据目录</h2>
+<figure data-type="image" tabindex="1"><img src="https://tong-hao.github.io/post-images/1721368047930.png" alt="" loading="lazy"></figure>
+<ul>
+<li>doris的元数据采用的bdb(Berkeley DB)存储的，是kv存储</li>
+<li>bdb可以理解为元数据的元数据</li>
+<li>image目录才是doris的元数据信息
+<ul>
+<li>image.xxx是元数据的镜像数据</li>
+<li>ROLE是角色数据</li>
+<li>VERSION存的是集群信息</li>
+</ul>
+</li>
+</ul>
+<h2 id="存储">存储</h2>
+<ul>
+<li>使用bdbje(Berkeley DB java editor)存放元数据</li>
+<li>怎么存放？
+<ul>
+<li>kv形式</li>
+<li>写元数据代码入口：<code>EditLog.logEdit</code></li>
+<li>回放日志代码入口：<code>Catalog.replayJournal</code></li>
+</ul>
+</li>
+<li>checkpoint
+<ul>
+<li>定期将日志形成一个image文件</li>
+<li>入口：<code>Checkpoint.runAfterCatalogReady</code></li>
+<li>逻辑
+<ul>
+<li>创建checkpoint日志位置</li>
+<li>写入新image文件</li>
+<li>将image ID 推送给其他FE节点（非master）</li>
+<li>删除旧的journal</li>
+<li>删除旧的image</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>image格式
+<ul>
+<li><img src="https://tong-hao.github.io/post-images/1721368061517.png" alt="" loading="lazy"></li>
+</ul>
+</li>
+</ul>
+<h2 id="数据同步">数据同步</h2>
+<ul>
+<li>非master的日志如何与master保持一致？
+<ul>
+<li>bdbje没有回掉机制，只能定期轮询的方式将master上的新增日志发送给follower</li>
+<li>代码入口：<code>Env.createReplayer</code></li>
+</ul>
+</li>
+<li>如何防止非master与master的失联？
+<ul>
+<li>master定期生成一个时间戳，写入catalog</li>
+<li>非master通过回放可以收到这个时间戳</li>
+<li>如果非master的这个时间戳与当前时间的差值大于配置中的值，则认为失联</li>
+<li>代码：<code>Config.meta_delay_toleration_second</code></li>
+</ul>
+</li>
+<li>master挂了之后，follower会成为新的master
+<ul>
+<li>这个是leader选举功能</li>
+<li>采用了bdbje自带的<code>StateChangeListener</code> 功能</li>
+<li>代码入口：<code>BDBStateChangeListener</code></li>
+</ul>
+</li>
+</ul>
+<h2 id="doris-元数据回放">doris-元数据回放</h2>
+<figure data-type="image" tabindex="3"><img src="https://tong-hao.github.io/post-images/1721368078777.png" alt="" loading="lazy"></figure>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[doris-数据的读取]]></title>
+        <id>https://tong-hao.github.io/gk7KfAOV2/</id>
+        <link href="https://tong-hao.github.io/gk7KfAOV2/">
+        </link>
+        <updated>2024-07-19T05:45:25.000Z</updated>
+        <content type="html"><![CDATA[<ul>
+<li>基础概念
+<ul>
+<li>Tablet 分桶</li>
+<li>Rowset 版本数据</li>
+<li>Segment 是文件系统中的一个文件，256M，会拆成多个page</li>
+<li>Page 是一个逻辑概念</li>
+</ul>
+</li>
+<li>Doris数据读取流程
+<ul>
+<li><code>Reader</code>-&gt; <code>RowsetReader</code> -&gt; <code>SegmentIterator</code></li>
+<li><img src="https://tong-hao.github.io/post-images/1721367948244.png" alt="" loading="lazy"></li>
+<li>Reader相当于一个表</li>
+<li><code>TupleReader</code>
+<ul>
+<li><code>_direct_next_row</code>  key不排序</li>
+<li><code>_agg_key_next_row</code> key是排序的，可以用于做聚合</li>
+<li><code>_unique_key_next_row</code> key去重</li>
+</ul>
+</li>
+<li><code>CollectIterator</code></li>
+<li><code>RowSetReader</code></li>
+<li><img src="https://tong-hao.github.io/post-images/1721367964487.png" alt="" loading="lazy"></li>
+</ul>
+</li>
+<li>page的结构
+<ul>
+<li><img src="https://tong-hao.github.io/post-images/1721367979430.png" alt="" loading="lazy"></li>
+<li>类型：IndexPage/DataPage/DictionaryPage/ShortKeyPage</li>
+<li>压缩：LZ4、LZ4f、Snappy、Zlib</li>
+</ul>
+</li>
+<li><code>PageCache</code>
+<ul>
+<li>类型：<code>IndexPage</code>, <code>DataPage</code></li>
+<li>策略：LRUCache</li>
+<li>配置：
+<ul>
+<li>storage_page_cache_limit</li>
+<li>index_page_cache_percentage</li>
+<li>disable_storage_page_cache</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>Cache存储
+<ul>
+<li>CacheKey：文件名+offset</li>
+<li>内存结构：双向链表</li>
+<li>引用计数的CacheHandle</li>
+<li>Cache优先级：Normal/Durable
+<ul>
+<li>如果表为in_memmory，PageCache为Durable</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[doris-FE与BE的任务交互]]></title>
+        <id>https://tong-hao.github.io/Hxe-2kCjz/</id>
+        <link href="https://tong-hao.github.io/Hxe-2kCjz/">
+        </link>
+        <updated>2024-07-19T05:44:06.000Z</updated>
+        <content type="html"><![CDATA[<figure data-type="image" tabindex="1"><img src="https://tong-hao.github.io/post-images/1721367869972.png" alt="" loading="lazy"></figure>
+<p>FE发送：</p>
+<ul>
+<li><code>AgentBatchTask</code> 批量发送task给BE</li>
+<li><code>AgentTaskExecutor</code></li>
+</ul>
+<p>BE接收：</p>
+<ul>
+<li><code>agent_server.cpp</code> 接收task</li>
+<li><code>task_worker_pool.cpp</code> 工作线程池</li>
+</ul>
+<p>FE接收：</p>
+<ul>
+<li><code>FrontendServiceImpl</code></li>
+<li><code>MasterImpl::finishTask</code></li>
+</ul>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[doris-查询优化器]]></title>
+        <id>https://tong-hao.github.io/Shp4F8ZfH/</id>
+        <link href="https://tong-hao.github.io/Shp4F8ZfH/">
+        </link>
+        <updated>2024-07-19T05:42:49.000Z</updated>
+        <content type="html"><![CDATA[<ul>
+<li>优化器目的：find best plan</li>
+<li>query改写
+<ul>
+<li>表达式改写
+<ul>
+<li><code>ExprRewriteRule</code> 接口，如：<code>CompundPredicateWriteRule</code> 子类</li>
+<li>注册表达式规则</li>
+</ul>
+</li>
+<li>子查询改写
+<ul>
+<li><code>rewriteSelectStament</code>方法</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>Join order优化
+<ul>
+<li>代码入口:<code>createJoinPlan</code></li>
+</ul>
+</li>
+<li>谓词下推</li>
+<li>如何分布式join？
+<ul>
+<li>如：表a和表b进行join</li>
+<li>方法1: 分布式的情况下需要将较小的表分发到各个存储节点上</li>
+<li>方法2: 表a和表b的分片一样，不需要分发。</li>
+<li>代码入口：<code>createHashJoinFragment</code></li>
+</ul>
+</li>
+<li>如何分布式Agg？
+<ul>
+<li>现执行 Agg local</li>
+<li>再执行 Agg global</li>
+</ul>
+</li>
+</ul>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[doris-sql执行过程]]></title>
+        <id>https://tong-hao.github.io/-vby9nkEj/</id>
+        <link href="https://tong-hao.github.io/-vby9nkEj/">
+        </link>
+        <updated>2024-07-19T05:39:34.000Z</updated>
+        <content type="html"><![CDATA[<figure data-type="image" tabindex="1"><img src="https://tong-hao.github.io/post-images/1721367646165.png" alt="" loading="lazy"></figure>
+<h2 id="sql到查询计划">sql到查询计划</h2>
+<p>sql到查询计划需要两步：<code>Sql -&gt; PlanNodeTree -&gt; PlanFragmentTree</code></p>
+<ul>
+<li>PlanNodeTree 逻辑执行计划</li>
+<li>PlanFragmentTree 是基于分布式的逻辑计划</li>
+<li>PlanNode是一个逻辑算子</li>
+</ul>
+<p>第一步：<br>
+<img src="https://tong-hao.github.io/post-images/1721367666204.png" alt="" loading="lazy"></p>
+<p>第二步：<br>
+PlanNodeTree是没办法给分布式数据库执行的，需要进行拆解<br>
+<img src="https://tong-hao.github.io/post-images/1721367680906.png" alt="" loading="lazy"></p>
+<ul>
+<li>DataSink负责发送数据</li>
+<li>ExchangeNode负责接收数据</li>
+<li>Plan Fragment = PlanNode + DataSink
+<ul>
+<li>除了root节点，其他节点都有个DataSink</li>
+</ul>
+</li>
+</ul>
+<h2 id="执行查询">执行查询</h2>
+<h3 id="分配be分发给be">分配BE+分发给BE</h3>
+<ul>
+<li>主要代码在 <code>Coordinator.java</code></li>
+<li>步骤为：
+<ul>
+<li>prepare：初始化工作</li>
+<li>scheduler: 给Fragment分配BE
+<ul>
+<li>computeScanRange</li>
+<li>assignFragment</li>
+</ul>
+</li>
+<li>send</li>
+</ul>
+</li>
+</ul>
+<h2 id="fragment的执行">Fragment的执行</h2>
+<ul>
+<li>主要类 PlanFragmentExecutor</li>
+<li>步骤：
+<ul>
+<li>prepare</li>
+<li>open
+<ul>
+<li>open plan node tree</li>
+<li>open sink</li>
+<li>对plan执行next获取记录，并调用sink发送</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<h2 id="topfragment">TopFragment</h2>
+<ul>
+<li>执行计划的结果会放到TopFragment，在BE侧
+<ul>
+<li>拉取的数据会放到<code>MysqlChannel.java</code>中，到达一定的量后会发送</li>
+</ul>
+</li>
+<li>在FE侧的Coordinator会到TopFragment拉取数据</li>
+</ul>
+<figure data-type="image" tabindex="2"><img src="https://tong-hao.github.io/post-images/1721367697012.png" alt="" loading="lazy"></figure>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[pg-代码-事务ID回绕问题]]></title>
+        <id>https://tong-hao.github.io/BlvUamky8/</id>
+        <link href="https://tong-hao.github.io/BlvUamky8/">
+        </link>
+        <updated>2024-06-19T04:19:17.000Z</updated>
+        <content type="html"><![CDATA[<p>pg为了减少存储空间，将事务ID设置为uint32。但是如果数据量超过40亿就会出问题，无法比较事务的先后。<br>
+为了解决这个问题，pg提供了<code>TransactionIdPrecedes</code>函数进行判断事务的先后。</p>
+<p>代码如下：</p>
+<pre><code class="language-c">#include &lt;iostream&gt;
+
+using TransactionId = uint32_t;
+using int32 = int32_t;
+
+bool TransactionIdIsNormal(TransactionId id) {
+	return id &gt;= 3;
+}
+
+bool TransactionIdPrecedes(TransactionId id1, TransactionId id2) {
+	/*
+	 * If either ID is a permanent XID then we can just do unsigned
+	 * comparison.	If both are normal, do a modulo-2^31 comparison.
+	 */
+	int32 diff;
+
+	if (!TransactionIdIsNormal(id1) || !TransactionIdIsNormal(id2))
+		return (id1 &lt; id2);
+
+	diff = (int32)(id1 - id2);
+	return (diff &lt; 0);
+}
+
+int main() {
+	TransactionId id = (1 &lt;&lt; 31) + 1000000;
+	std::cout &lt;&lt; TransactionIdPrecedes(11, 100) &lt;&lt; std::endl;  // true
+	std::cout &lt;&lt; TransactionIdPrecedes(11, id)
+	          &lt;&lt; std::endl;  // false, 因为 11 - （2^31+1000000)
+	                         // 会超过int32的范围，会回绕。 得到的结果是一个正数
+	std::cout &lt;&lt; TransactionIdPrecedes(1, id) &lt;&lt; std::endl;
+	return 0;
+}
+</code></pre>
+<ul>
+<li><code>TransactionIdPrecedes</code> 函数是pg中的代码，用于判断事务id1是否先于id2</li>
+<li>关键代码 <code>diff = (int32)(id1 - id2);</code> 如果 <code>id1 - id2</code> 不在 int32的范围<code>[-2^32, 2^32-1]</code> 范围就会进行回绕。比如：2^31+100 转成int32 就会是负数。</li>
+</ul>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[pg-堆文件结构]]></title>
+        <id>https://tong-hao.github.io/W2MNdGp8Q/</id>
+        <link href="https://tong-hao.github.io/W2MNdGp8Q/">
+        </link>
+        <updated>2024-06-12T03:19:56.000Z</updated>
+        <content type="html"><![CDATA[<figure data-type="image" tabindex="1"><img src="https://tong-hao.github.io/post-images/1718162437367.webp" alt="" loading="lazy"></figure>
+<ul>
+<li>一个数据文件（heap table, index, free space map, and visibility map）是可以分成多个page</li>
+<li>每个page默认是8 KB</li>
+<li>每个page有个block numbers，从0开始</li>
+<li>每个page包含了3种类型的数据
+<ul>
+<li>header</li>
+<li>line pointer，每个pointer是4个字节，是个偏移量，指向tuples</li>
+<li>heap tuples</li>
+</ul>
+</li>
+<li>PageHeaderData结构</li>
+</ul>
+<pre><code>typedef struct PageHeaderData @src/include/storage/bufpage.h
+      {
+        /* XXX LSN is member of *any* block, not only page-organized ones */
+        PageXLogRecPtr       pd_lsn;      /* LSN: next byte after last byte of xlog
+                                           * record for last change to this page */
+        uint16                pd_checksum; /* checksum */
+        uint16                pd_flags;    /* flag bits, see below */
+        LocationIndex         pd_lower;    /* offset to start of free space */
+        LocationIndex         pd_upper;    /* offset to end of free space */
+        LocationIndex         pd_special;  /* offset to start of special space */
+        uint16                pd_pagesize_version;
+        TransactionId         pd_prune_xid;/* oldest prunable XID, or zero if none */
+        ItemIdData            pd_linp[1];  /* beginning of line pointer array */
+      } PageHeaderData;
+      typedef PageHeaderData *PageHeader;
+      typedef uint64 XLogRecPtr;
+
+</code></pre>
+<h2 id="page-header信息">page header信息</h2>
+<ul>
+<li><code>pd_lower</code>和<code>pd_upper</code> 用于记录空闲空间，随着记录的添加，<code>pd_lower</code>向后移动，<code>pd_upper</code> 则向前移动，空闲空间会越来越少。</li>
+<li><code>pd_lsn</code>：最后一次修改该页的日志序列号。</li>
+<li><code>pd_checksum</code>：该页的校验和。</li>
+<li><code>pd_flags</code>：标志位，指示页的状态。如：PD_PAGE_FULL表示页面已经满了，PD_HAS_FREE_LINES 表示有空闲空间</li>
+<li><code>pd_pagesize_version</code>：页面大小和版本信息。</li>
+<li><code>pd_prune_xid</code>：上次修剪（prune）操作的事务ID。</li>
+</ul>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[pg-Streaming Replication是如何工作的]]></title>
+        <id>https://tong-hao.github.io/KKOnYswxx/</id>
+        <link href="https://tong-hao.github.io/KKOnYswxx/">
+        </link>
+        <updated>2024-06-11T07:03:53.000Z</updated>
+        <content type="html"><![CDATA[<ul>
+<li>同步流复制是9.1版本实现的</li>
+<li>它是一主多从架构，数据从主数据库中复制到从数据库中</li>
+</ul>
+<h2 id="启动流程">启动流程</h2>
+<figure data-type="image" tabindex="1"><img src="https://tong-hao.github.io/post-images/1718089448479.png" alt="" loading="lazy"></figure>
+<ol>
+<li>分别启动 主从数据库</li>
+<li>从数据库启动 <code>startup</code> 进程</li>
+<li>从数据库启动 <code>walreceiver</code> 进程</li>
+<li><code>walreceiver</code> 进程 发送请求给主数据库，如果主数据库没有运行，则定期重试</li>
+<li>当主数据库收到请求后，启动一个<code>walsender</code> 进程，然后二者建立TCP连接</li>
+<li><code>walreceiver</code> 进程将自己最新的LSN发送给<code>walsender</code> 进程</li>
+<li>在<code>walsender</code> 进程中，如果 <code>walreceiver</code> 进程中的LSN小于 <code>walsender</code> 进程，则发送缺少的WAL数据。这个过程叫做catch-up</li>
+</ol>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[什么是PITR]]></title>
+        <id>https://tong-hao.github.io/YryCleMsS/</id>
+        <link href="https://tong-hao.github.io/YryCleMsS/">
+        </link>
+        <updated>2024-06-11T07:03:13.000Z</updated>
+        <content type="html"><![CDATA[<!-- more -->
+<ul>
+<li>PITR 全称 Point-in-Time Recovery</li>
+<li>是在8.0版本中实现的</li>
+<li>它利用<code>base backup</code> 和 归档日志，可以恢复数据库到任意一个时间点</li>
+<li>在数据库底层存储出现错误的时候，可以使用这个功能进行数据恢复</li>
+</ul>
+<h2 id="什么是base-backup">什么是Base Backup</h2>
+<ul>
+<li>在线数据库备份分为逻辑备份和物理备份。</li>
+<li>逻辑备份有个缺点，备份和恢复时间长</li>
+<li>物理备份要比逻辑备份快很多</li>
+<li>base backup是全量的物理备份</li>
+<li>base backup过程：
+<ul>
+<li>执行<code>pg_backup_start</code></li>
+<li>打snapshot</li>
+<li>执行<code>pg_backup_stop</code></li>
+</ul>
+</li>
+<li>base backup 更简单的方法是执行<code>pg_basebackup</code><br>
+<img src="https://tong-hao.github.io/post-images/1718089414732.png" alt="" loading="lazy"></li>
+</ul>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[pg-WAL的管理]]></title>
+        <id>https://tong-hao.github.io/Rm1cm3S0n/</id>
+        <link href="https://tong-hao.github.io/Rm1cm3S0n/">
+        </link>
+        <updated>2024-06-11T07:02:37.000Z</updated>
+        <content type="html"><![CDATA[<h2 id="wal文件管理">WAL文件管理</h2>
+<ul>
+<li>checkpoint进程启动时，会评估WAL文件的数量
+<ul>
+<li>配置项：min_wal_size 和 max_wal_size</li>
+</ul>
+</li>
+<li>同时会清除无用的WAL文件
+<ul>
+<li>会将最后一个REDO point记录之前的文件<strong>回收掉</strong></li>
+<li>并没有真正的删除，而是重复利用</li>
+</ul>
+</li>
+</ul>
+<figure data-type="image" tabindex="1"><img src="https://tong-hao.github.io/post-images/1718089376535.png" alt="" loading="lazy"></figure>
+<h2 id="wal文件何时切换">WAL文件何时切换？</h2>
+<ul>
+<li>WAL文件写到一定的大小</li>
+<li>手动触发：<code>pg_switch_xlog</code>被执行</li>
+<li>配置项：<code>archive_timeout</code></li>
+</ul>
+]]></content>
+    </entry>
+</feed>

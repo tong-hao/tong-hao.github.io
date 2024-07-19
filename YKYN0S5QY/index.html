@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" >
+
+<title>一致性协议 paxos | Caton Blog</title>
+
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="shortcut icon" href="https://tong-hao.github.io/favicon.ico?v=1721368774787">
+<link rel="stylesheet" href="https://tong-hao.github.io/styles/main.css">
+
+
+
+<link rel="stylesheet" href="https://unpkg.com/aos@next/dist/aos.css" />
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+
+
+
+    <meta name="description" content="简短总结
+Paxos Components
+
+Proposers：处理客户端请求，发出提案，决定是否chose
+Acceptors：决定是否接受提案，保存chosen的提案
+
+流程
+
+
+Proposer 选择一个提案号 n
+Proposer..." />
+    <meta name="keywords" content="数据库,算法" />
+  </head>
+  <body>
+    <div id="app" class="main">
+
+      <div class="sidebar" :class="{ 'full-height': menuVisible }">
+  <div class="top-container" data-aos="fade-right">
+    <div class="top-header-container">
+      <a class="site-title-container" href="https://tong-hao.github.io">
+        <img src="https://tong-hao.github.io/images/avatar.png?v=1721368774787" class="site-logo">
+        <h1 class="site-title">Caton Blog</h1>
+      </a>
+      <div class="menu-btn" @click="menuVisible = !menuVisible">
+        <div class="line"></div>
+      </div>
+    </div>
+    <div>
+      
+        
+          <a href="/" class="site-nav">
+            首页
+          </a>
+        
+      
+        
+          <a href="/archives" class="site-nav">
+            归档
+          </a>
+        
+      
+        
+          <a href="/tags" class="site-nav">
+            标签
+          </a>
+        
+      
+        
+          <a href="/about" class="site-nav">
+            关于
+          </a>
+        
+      
+        
+          <a href="/doris" class="site-nav">
+            #doris
+          </a>
+        
+      
+        
+          <a href="/pg" class="site-nav">
+            #postgresql
+          </a>
+        
+      
+        
+          <a href="/db" class="site-nav">
+            #数据库内核
+          </a>
+        
+      
+        
+          <a href="/graph-computer/" class="site-nav">
+            #图计算
+          </a>
+        
+      
+        
+          <a href="/graph-db" class="site-nav">
+            #图数据库
+          </a>
+        
+      
+    </div>
+  </div>
+  <div class="bottom-container" data-aos="flip-up" data-aos-offset="0">
+    <div class="social-container">
+      
+        
+          <a class="social-link" href="https://github.com/tong-hao" target="_blank">
+            <i class="fab fa-github"></i>
+          </a>
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    </div>
+    <div class="site-description">
+      ✍️一个专注于数据库的博客
+    </div>
+    <div class="site-footer">
+       | <a class="rss" href="https://tong-hao.github.io/atom.xml" target="_blank">RSS</a>
+    </div>
+  </div>
+</div>
+
+
+      <div class="main-container">
+        <div class="content-container" data-aos="fade-up">
+          <div class="post-detail">
+            <h2 class="post-title">一致性协议 paxos</h2>
+            <div class="post-date">2024-06-01</div>
+            
+            <div class="post-content" v-pre>
+              <h2 id="简短总结">简短总结</h2>
+<h3 id="paxos-components">Paxos Components</h3>
+<ul>
+<li>Proposers：处理客户端请求，发出提案，决定是否chose</li>
+<li>Acceptors：决定是否接受提案，保存chosen的提案</li>
+</ul>
+<h3 id="流程">流程</h3>
+<figure data-type="image" tabindex="1"><img src="https://tong-hao.github.io/post-images/1717209821151.webp" alt="" loading="lazy"></figure>
+<ol>
+<li>Proposer 选择一个提案号 n</li>
+<li>Proposer 准备 prepare消息发送给所有的Acceptors</li>
+<li>Acceptor 检查提案号 n, 如果比自己本地的大，则接受提案，Response会携带 acceptedPropposal 和 acceptedValue 。</li>
+<li>Proposer 准备 accept消息</li>
+<li>Proposer 发送 accept消息给所有的Acceptors</li>
+<li>Acceptor 检查提案号 n, 如果大于等于自己本地的，更新本地的{acceptedPropposal 和 acceptedValue}</li>
+<li>Proposer 如果收到拒绝就返回到1继续，没有则发送commit消息</li>
+</ol>
+<h3 id="multi-paxos">multi-paxos</h3>
+<ol>
+<li>使用basic paxos选一个Proposer作为leader</li>
+<li>后续有leader 发起 accept消息（日志复制）</li>
+<li>Acceptor 检查accept消息（日志复制）</li>
+<li>leader发送commit消息</li>
+</ol>
+<hr>
+<h2 id="参考资料">参考资料</h2>
+<p>论文《paxos》<br>
+文章《Unde􏰱􏰲􏰳anding Pa􏰴xos》</p>
+<h2 id="流程-2">流程</h2>
+<pre><code>client   proposer    acceptor    learner
+  |         |           |           |
+  *---1----&gt;*--2.pre---&gt;*           ｜
+  |         *&lt;-3.pro----*           ｜
+  |         *--4.acc---&gt;*--5.------&gt;*
+  |         |           |           |
+  |         |           |           |
+
+1. 客户端执行一个操作，调用本地的proposer执行
+2. prepare request格式: number
+   proposer 向所有的acceptor发送prepare请求。
+   acceptor收到请求后对比请求中的number和已经response过的number，如果小于response中的，则拒绝；大于则接受。
+3. promise response格式: 当前最大number
+   如果accepter拒绝请求，则取最大number，继续发起prepare request
+   如果accepter接受请求，则发起accept请求。
+4. accept request格式: number + value
+   acceptor接收到请求后，如果number是response中的最大值，则发起chosen请求，否则忽略该请求。
+5. acceptor发起chosen请求,调用本地的learner，执行状态机。
+6. learner负责日志的复制，从而保证多副本。
+
+
+</code></pre>
+<h2 id="论文摘要">论文摘要</h2>
+<pre><code>Phase 1. (a) A proposer selects a proposal number n and sends a prepare request with number n to a majority of acceptors.
+(b) If an acceptor receives a prepare request with number n greater than that of any prepare request to which it has already responded, then it responds to the request with a promise not to accept any more proposals numbered less than n and with the highest-numbered pro- posal (if any) that it has accepted.
+
+Phase 2. (a) If the proposer receives a response to its prepare requests (numbered n) from a majority of acceptors, then it sends an accept request to each of those acceptors for a proposal numbered n with a value v, where v is the value of the highest-numbered proposal among the responses, or is any value if the responses reported no proposals.
+(b) If an acceptor receives an accept request for a proposal numbered n, it accepts the proposal unless it has already responded to a prepare request having a number greater than n.
+
+
+To guarantee progress, a distinguished proposer must be selected as the only one to try issuing proposals.
+
+</code></pre>
+<h2 id="问题">问题</h2>
+<ul>
+<li>
+<p>proposer只有一个，系统启动的时候如何选择master？</p>
+</li>
+<li>
+<p>proposer如何感知对方挂掉？<br>
+proposer之间有心跳，通过心跳超时感知。</p>
+</li>
+<li>
+<p>结合分布式kv存储，理解？<br>
+添加一个顶点类型时，schema tool --&gt; schema service --&gt; kv client(分布式)[paxos客户端] --&gt; proposer<br>
+learner将顶点类型写入到kv存储中。</p>
+</li>
+<li>
+<p>并发写入性能如何保证？<br>
+paxos client不能并行发起请求，必须保证当前的请求处理完后，再发起下一个请求。<br>
+如何解决性能问题？增加group，每个group相互独立，互不影响。group数量与partition数量相一致。</p>
+</li>
+<li>
+<p>paxos是一个两阶段提交协议吗？<br>
+不是</p>
+</li>
+</ul>
+<h2 id="在项目上的设计与应用">在项目上的设计与应用</h2>
+<h3 id="流程图">流程图</h3>
+<figure data-type="image" tabindex="2"><img src="https://tong-hao.github.io/post-images/1717209780985.webp" alt="" loading="lazy"></figure>
+
+            </div>
+            
+              <div class="tag-container">
+                
+                  <a href="https://tong-hao.github.io/db/" class="tag">
+                    数据库
+                  </a>
+                
+                  <a href="https://tong-hao.github.io/algo/" class="tag">
+                    算法
+                  </a>
+                
+              </div>
+            
+            
+              <div class="next-post">
+                <div class="next">下一篇</div>
+                <a href="https://tong-hao.github.io/z-PMZclWW/">
+                  <h3 class="post-title">
+                    miniob
+                  </h3>
+                </a>
+              </div>
+            
+
+            
+
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <script src="https://unpkg.com/aos@next/dist/aos.js"></script>
+<script type="application/javascript">
+
+AOS.init();
+
+var app = new Vue({
+  el: '#app',
+  data: {
+    menuVisible: false,
+  },
+})
+
+</script>
+
+
+  <script src="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.5.1/build/highlight.min.js"></script>
+  <script>
+    hljs.initHighlightingOnLoad()
+  </script>
+
+
+
+
+
+  </body>
+</html>

@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" >
+
+<title>pg-堆文件结构 | Caton Blog</title>
+
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="shortcut icon" href="https://tong-hao.github.io/favicon.ico?v=1721368774787">
+<link rel="stylesheet" href="https://tong-hao.github.io/styles/main.css">
+
+
+
+<link rel="stylesheet" href="https://unpkg.com/aos@next/dist/aos.css" />
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+
+
+
+    <meta name="description" content="
+
+一个数据文件（heap table, index, free space map, and visibility map）是可以分成多个page
+每个page默认是8 KB
+每个page有个block numbers，从0开始
+每个pa..." />
+    <meta name="keywords" content="postgresql" />
+  </head>
+  <body>
+    <div id="app" class="main">
+
+      <div class="sidebar" :class="{ 'full-height': menuVisible }">
+  <div class="top-container" data-aos="fade-right">
+    <div class="top-header-container">
+      <a class="site-title-container" href="https://tong-hao.github.io">
+        <img src="https://tong-hao.github.io/images/avatar.png?v=1721368774787" class="site-logo">
+        <h1 class="site-title">Caton Blog</h1>
+      </a>
+      <div class="menu-btn" @click="menuVisible = !menuVisible">
+        <div class="line"></div>
+      </div>
+    </div>
+    <div>
+      
+        
+          <a href="/" class="site-nav">
+            首页
+          </a>
+        
+      
+        
+          <a href="/archives" class="site-nav">
+            归档
+          </a>
+        
+      
+        
+          <a href="/tags" class="site-nav">
+            标签
+          </a>
+        
+      
+        
+          <a href="/about" class="site-nav">
+            关于
+          </a>
+        
+      
+        
+          <a href="/doris" class="site-nav">
+            #doris
+          </a>
+        
+      
+        
+          <a href="/pg" class="site-nav">
+            #postgresql
+          </a>
+        
+      
+        
+          <a href="/db" class="site-nav">
+            #数据库内核
+          </a>
+        
+      
+        
+          <a href="/graph-computer/" class="site-nav">
+            #图计算
+          </a>
+        
+      
+        
+          <a href="/graph-db" class="site-nav">
+            #图数据库
+          </a>
+        
+      
+    </div>
+  </div>
+  <div class="bottom-container" data-aos="flip-up" data-aos-offset="0">
+    <div class="social-container">
+      
+        
+          <a class="social-link" href="https://github.com/tong-hao" target="_blank">
+            <i class="fab fa-github"></i>
+          </a>
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    </div>
+    <div class="site-description">
+      ✍️一个专注于数据库的博客
+    </div>
+    <div class="site-footer">
+       | <a class="rss" href="https://tong-hao.github.io/atom.xml" target="_blank">RSS</a>
+    </div>
+  </div>
+</div>
+
+
+      <div class="main-container">
+        <div class="content-container" data-aos="fade-up">
+          <div class="post-detail">
+            <h2 class="post-title">pg-堆文件结构</h2>
+            <div class="post-date">2024-06-12</div>
+            
+            <div class="post-content" v-pre>
+              <figure data-type="image" tabindex="1"><img src="https://tong-hao.github.io/post-images/1718162437367.webp" alt="" loading="lazy"></figure>
+<ul>
+<li>一个数据文件（heap table, index, free space map, and visibility map）是可以分成多个page</li>
+<li>每个page默认是8 KB</li>
+<li>每个page有个block numbers，从0开始</li>
+<li>每个page包含了3种类型的数据
+<ul>
+<li>header</li>
+<li>line pointer，每个pointer是4个字节，是个偏移量，指向tuples</li>
+<li>heap tuples</li>
+</ul>
+</li>
+<li>PageHeaderData结构</li>
+</ul>
+<pre><code>typedef struct PageHeaderData @src/include/storage/bufpage.h
+      {
+        /* XXX LSN is member of *any* block, not only page-organized ones */
+        PageXLogRecPtr       pd_lsn;      /* LSN: next byte after last byte of xlog
+                                           * record for last change to this page */
+        uint16                pd_checksum; /* checksum */
+        uint16                pd_flags;    /* flag bits, see below */
+        LocationIndex         pd_lower;    /* offset to start of free space */
+        LocationIndex         pd_upper;    /* offset to end of free space */
+        LocationIndex         pd_special;  /* offset to start of special space */
+        uint16                pd_pagesize_version;
+        TransactionId         pd_prune_xid;/* oldest prunable XID, or zero if none */
+        ItemIdData            pd_linp[1];  /* beginning of line pointer array */
+      } PageHeaderData;
+      typedef PageHeaderData *PageHeader;
+      typedef uint64 XLogRecPtr;
+
+</code></pre>
+<h2 id="page-header信息">page header信息</h2>
+<ul>
+<li><code>pd_lower</code>和<code>pd_upper</code> 用于记录空闲空间，随着记录的添加，<code>pd_lower</code>向后移动，<code>pd_upper</code> 则向前移动，空闲空间会越来越少。</li>
+<li><code>pd_lsn</code>：最后一次修改该页的日志序列号。</li>
+<li><code>pd_checksum</code>：该页的校验和。</li>
+<li><code>pd_flags</code>：标志位，指示页的状态。如：PD_PAGE_FULL表示页面已经满了，PD_HAS_FREE_LINES 表示有空闲空间</li>
+<li><code>pd_pagesize_version</code>：页面大小和版本信息。</li>
+<li><code>pd_prune_xid</code>：上次修剪（prune）操作的事务ID。</li>
+</ul>
+
+            </div>
+            
+              <div class="tag-container">
+                
+                  <a href="https://tong-hao.github.io/pg/" class="tag">
+                    postgresql
+                  </a>
+                
+              </div>
+            
+            
+              <div class="next-post">
+                <div class="next">下一篇</div>
+                <a href="https://tong-hao.github.io/KKOnYswxx/">
+                  <h3 class="post-title">
+                    pg-Streaming Replication是如何工作的
+                  </h3>
+                </a>
+              </div>
+            
+
+            
+
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <script src="https://unpkg.com/aos@next/dist/aos.js"></script>
+<script type="application/javascript">
+
+AOS.init();
+
+var app = new Vue({
+  el: '#app',
+  data: {
+    menuVisible: false,
+  },
+})
+
+</script>
+
+
+  <script src="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.5.1/build/highlight.min.js"></script>
+  <script>
+    hljs.initHighlightingOnLoad()
+  </script>
+
+
+
+
+
+  </body>
+</html>

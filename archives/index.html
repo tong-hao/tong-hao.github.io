@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" >
+
+<title>文章归档 | Caton Blog</title>
+
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="shortcut icon" href="https://tong-hao.github.io/favicon.ico?v=1721368774787">
+<link rel="stylesheet" href="https://tong-hao.github.io/styles/main.css">
+
+
+
+<link rel="stylesheet" href="https://unpkg.com/aos@next/dist/aos.css" />
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+
+
+
+    <meta name="description" content="✍️一个专注于数据库的博客">
+  </head>
+  <body>
+    <div id="app" class="main">
+
+      <div class="sidebar" :class="{ 'full-height': menuVisible }">
+  <div class="top-container" data-aos="fade-right">
+    <div class="top-header-container">
+      <a class="site-title-container" href="https://tong-hao.github.io">
+        <img src="https://tong-hao.github.io/images/avatar.png?v=1721368774787" class="site-logo">
+        <h1 class="site-title">Caton Blog</h1>
+      </a>
+      <div class="menu-btn" @click="menuVisible = !menuVisible">
+        <div class="line"></div>
+      </div>
+    </div>
+    <div>
+      
+        
+          <a href="/" class="site-nav">
+            首页
+          </a>
+        
+      
+        
+          <a href="/archives" class="site-nav">
+            归档
+          </a>
+        
+      
+        
+          <a href="/tags" class="site-nav">
+            标签
+          </a>
+        
+      
+        
+          <a href="/about" class="site-nav">
+            关于
+          </a>
+        
+      
+        
+          <a href="/doris" class="site-nav">
+            #doris
+          </a>
+        
+      
+        
+          <a href="/pg" class="site-nav">
+            #postgresql
+          </a>
+        
+      
+        
+          <a href="/db" class="site-nav">
+            #数据库内核
+          </a>
+        
+      
+        
+          <a href="/graph-computer/" class="site-nav">
+            #图计算
+          </a>
+        
+      
+        
+          <a href="/graph-db" class="site-nav">
+            #图数据库
+          </a>
+        
+      
+    </div>
+  </div>
+  <div class="bottom-container" data-aos="flip-up" data-aos-offset="0">
+    <div class="social-container">
+      
+        
+          <a class="social-link" href="https://github.com/tong-hao" target="_blank">
+            <i class="fab fa-github"></i>
+          </a>
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    </div>
+    <div class="site-description">
+      ✍️一个专注于数据库的博客
+    </div>
+    <div class="site-footer">
+       | <a class="rss" href="https://tong-hao.github.io/atom.xml" target="_blank">RSS</a>
+    </div>
+  </div>
+</div>
+
+
+      <div class="main-container">
+        <div class="content-container" data-aos="fade-up">
+          
+
+          <h2 class="archives-title">文章归档</h2>
+          <div class="archives-container">
+            
+              <h2 class="year" data-aos="fade-in" data-aos-delay="500">2024</h2>
+              
+                
+                  <article class="post">
+                    <a href="https://tong-hao.github.io/DyEPF8x6a/">
+                      <h2 class="post-title">
+                        doris-元数据
+                      </h2>
+                    </a>
+                  </article>
+                
+              
+                
+                  <article class="post">
+                    <a href="https://tong-hao.github.io/gk7KfAOV2/">
+                      <h2 class="post-title">
+                        doris-数据的读取
+                      </h2>
+                    </a>
+                  </article>
+                
+              
+                
+                  <article class="post">
+                    <a href="https://tong-hao.github.io/Hxe-2kCjz/">
+                      <h2 class="post-title">
+                        doris-FE与BE的任务交互
+                      </h2>
+                    </a>
+                  </article>
+                
+              
+                
+                  <article class="post">
+                    <a href="https://tong-hao.github.io/Shp4F8ZfH/">
+                      <h2 class="post-title">
+                        doris-查询优化器
+                      </h2>
+                    </a>
+                  </article>
+                
+              
+                
+                  <article class="post">
+                    <a href="https://tong-hao.github.io/-vby9nkEj/">
+                      <h2 class="post-title">
+                        doris-sql执行过程
+                      </h2>
+                    </a>
+                  </article>
+                
+              
+                
+                  <article class="post">
+                    <a href="https://tong-hao.github.io/BlvUamky8/">
+                      <h2 class="post-title">
+                        pg-代码-事务ID回绕问题
+                      </h2>
+                    </a>
+                  </article>
+                
+              
+                
+                  <article class="post">
+                    <a href="https://tong-hao.github.io/W2MNdGp8Q/">
+                      <h2 class="post-title">
+                        pg-堆文件结构
+                      </h2>
+                    </a>
+                  </article>
+                
+              
+                
+                  <article class="post">
+                    <a href="https://tong-hao.github.io/KKOnYswxx/">
+                      <h2 class="post-title">
+                        pg-Streaming Replication是如何工作的
+                      </h2>
+                    </a>
+                  </article>
+                
+              
+                
+                  <article class="post">
+                    <a href="https://tong-hao.github.io/YryCleMsS/">
+                      <h2 class="post-title">
+                        什么是PITR
+                      </h2>
+                    </a>
+                  </article>
+                
+              
+                
+                  <article class="post">
+                    <a href="https://tong-hao.github.io/Rm1cm3S0n/">
+                      <h2 class="post-title">
+                        pg-WAL的管理
+                      </h2>
+                    </a>
+                  </article>
+                
+              
+                
+                  <article class="post">
+                    <a href="https://tong-hao.github.io/UKIT1Izsb/">
+                      <h2 class="post-title">
+                        pg-数据库恢复处理
+                      </h2>
+                    </a>
+                  </article>
+                
+              
+                
+                  <article class="post">
+                    <a href="https://tong-hao.github.io/byTQWb3Cn/">
+                      <h2 class="post-title">
+                        pg-checkpoint
+                      </h2>
+                    </a>
+                  </article>
+                
+              
+                
+                  <article class="post">
+                    <a href="https://tong-hao.github.io/Jghwb3GT5/">
+                      <h2 class="post-title">
+                        pg-WAL的写入过程
+                      </h2>
+                    </a>
+                  </article>
+                
+              
+                
+                  <article class="post">
+                    <a href="https://tong-hao.github.io/zu96T1a5o/">
+                      <h2 class="post-title">
+                        pg-WAL的结构
+                      </h2>
+                    </a>
+                  </article>
+                
+              
+                
+                  <article class="post">
+                    <a href="https://tong-hao.github.io/tY92Cg08y/">
+                      <h2 class="post-title">
+                        pg-什么是WAL
+                      </h2>
+                    </a>
+                  </article>
+                
+              
+                
+                  <article class="post">
+                    <a href="https://tong-hao.github.io/UVxOVIu1P/">
+                      <h2 class="post-title">
+                        pg-刷脏
+                      </h2>
+                    </a>
+                  </article>
+                
+              
+                
+                  <article class="post">
+                    <a href="https://tong-hao.github.io/vMYVs6k3I/">
+                      <h2 class="post-title">
+                        pg-Buffer Manager的ring buffer
+                      </h2>
+                    </a>
+                  </article>
+                
+              
+                
+                  <article class="post">
+                    <a href="https://tong-hao.github.io/dYU7fF3iE/">
+                      <h2 class="post-title">
+                        pg-Buffer Manager的锁
+                      </h2>
+                    </a>
+                  </article>
+                
+              
+                
+                  <article class="post">
+                    <a href="https://tong-hao.github.io/NQ9UtOZSH/">
+                      <h2 class="post-title">
+                         pg-Buffer Manager的结构
+                      </h2>
+                    </a>
+                  </article>
+                
+              
+                
+                  <article class="post">
+                    <a href="https://tong-hao.github.io/0jKuhGUNs/">
+                      <h2 class="post-title">
+                        pg-Index-Only Scan
+                      </h2>
+                    </a>
+                  </article>
+                
+              
+                
+                  <article class="post">
+                    <a href="https://tong-hao.github.io/xAgc9VnBt/">
+                      <h2 class="post-title">
+                        pg-HOT
+                      </h2>
+                    </a>
+                  </article>
+                
+              
+                
+                  <article class="post">
+                    <a href="https://tong-hao.github.io/gqaX2I_Up/">
+                      <h2 class="post-title">
+                        pg-full vacuum
+                      </h2>
+                    </a>
+                  </article>
+                
+              
+                
+                  <article class="post">
+                    <a href="https://tong-hao.github.io/cruRMXhpm/">
+                      <h2 class="post-title">
+                        pg-autovacuum daemon
+                      </h2>
+                    </a>
+                  </article>
+                
+              
+                
+                  <article class="post">
+                    <a href="https://tong-hao.github.io/CrlG2x5xA/">
+                      <h2 class="post-title">
+                        pg-vacuum的两种方式
+                      </h2>
+                    </a>
+                  </article>
+                
+              
+                
+                  <article class="post">
+                    <a href="https://tong-hao.github.io/TPf7uoY40/">
+                      <h2 class="post-title">
+                        pg-visibility map
+                      </h2>
+                    </a>
+                  </article>
+                
+              
+                
+                  <article class="post">
+                    <a href="https://tong-hao.github.io/utvPEyE_u/">
+                      <h2 class="post-title">
+                        pg-vacuum的处理过程
+                      </h2>
+                    </a>
+                  </article>
+                
+              
+                
+                  <article class="post">
+                    <a href="https://tong-hao.github.io/FTX-pYTY8/">
+                      <h2 class="post-title">
+                        pg-可见性检查规则
+                      </h2>
+                    </a>
+                  </article>
+                
+              
+                
+                  <article class="post">
+                    <a href="https://tong-hao.github.io/sJaPMLeBJ/">
+                      <h2 class="post-title">
+                        pg中的Index-Only Scan
+                      </h2>
+                    </a>
+                  </article>
+                
+              
+                
+                  <article class="post">
+                    <a href="https://tong-hao.github.io/0t8-KXrGO/">
+                      <h2 class="post-title">
+                        pg中的HOT
+                      </h2>
+                    </a>
+                  </article>
+                
+              
+                
+                  <article class="post">
+                    <a href="https://tong-hao.github.io/c7kagpphr/">
+                      <h2 class="post-title">
+                        WAL
+                      </h2>
+                    </a>
+                  </article>
+                
+              
+                
+                  <article class="post">
+                    <a href="https://tong-hao.github.io/pGnz95I21/">
+                      <h2 class="post-title">
+                        tidb
+                      </h2>
+                    </a>
+                  </article>
+                
+              
+                
+                  <article class="post">
+                    <a href="https://tong-hao.github.io/CaaxzVZ6A/">
+                      <h2 class="post-title">
+                        sql的执行过程
+                      </h2>
+                    </a>
+                  </article>
+                
+              
+                
+                  <article class="post">
+                    <a href="https://tong-hao.github.io/RLkLeDpQg/">
+                      <h2 class="post-title">
+                        Raft一致性协议
+                      </h2>
+                    </a>
+                  </article>
+                
+              
+                
+                  <article class="post">
+                    <a href="https://tong-hao.github.io/mrElY8CRQ/">
+                      <h2 class="post-title">
+                        plato系统的pull与push模式
+                      </h2>
+                    </a>
+                  </article>
+                
+              
+                
+                  <article class="post">
+                    <a href="https://tong-hao.github.io/X5cF1zOq6/">
+                      <h2 class="post-title">
+                        存储结构CSR_CSC
+                      </h2>
+                    </a>
+                  </article>
+                
+              
+                
+                  <article class="post">
+                    <a href="https://tong-hao.github.io/oA8AcYhNi/">
+                      <h2 class="post-title">
+                        pg学习资料
+                      </h2>
+                    </a>
+                  </article>
+                
+              
+                
+                  <article class="post">
+                    <a href="https://tong-hao.github.io/YKYN0S5QY/">
+                      <h2 class="post-title">
+                        一致性协议 paxos
+                      </h2>
+                    </a>
+                  </article>
+                
+              
+                
+                  <article class="post">
+                    <a href="https://tong-hao.github.io/z-PMZclWW/">
+                      <h2 class="post-title">
+                        miniob
+                      </h2>
+                    </a>
+                  </article>
+                
+              
+                
+                  <article class="post">
+                    <a href="https://tong-hao.github.io/UMxAgDeEn/">
+                      <h2 class="post-title">
+                        B+ 对比 LSM
+                      </h2>
+                    </a>
+                  </article>
+                
+              
+                
+                  <article class="post">
+                    <a href="https://tong-hao.github.io/IeEImU1Oe/">
+                      <h2 class="post-title">
+                        LSM Tree
+                      </h2>
+                    </a>
+                  </article>
+                
+              
+                
+                  <article class="post">
+                    <a href="https://tong-hao.github.io/CQYsHZjKf/">
+                      <h2 class="post-title">
+                        go lang学习笔记
+                      </h2>
+                    </a>
+                  </article>
+                
+              
+                
+                  <article class="post">
+                    <a href="https://tong-hao.github.io/GwkSCpI8z/">
+                      <h2 class="post-title">
+                        duckdb
+                      </h2>
+                    </a>
+                  </article>
+                
+              
+                
+                  <article class="post">
+                    <a href="https://tong-hao.github.io/Erbwx1H-n/">
+                      <h2 class="post-title">
+                        cpp-template与lambda 结合使用
+                      </h2>
+                    </a>
+                  </article>
+                
+              
+                
+                  <article class="post">
+                    <a href="https://tong-hao.github.io/6UOrlaqFL/">
+                      <h2 class="post-title">
+                        cpp-shared_ptr实现
+                      </h2>
+                    </a>
+                  </article>
+                
+              
+                
+                  <article class="post">
+                    <a href="https://tong-hao.github.io/y0hV-xZSU/">
+                      <h2 class="post-title">
+                        cpp-HashTable
+                      </h2>
+                    </a>
+                  </article>
+                
+              
+                
+                  <article class="post">
+                    <a href="https://tong-hao.github.io/cockroachdb/">
+                      <h2 class="post-title">
+                        CockroachDB
+                      </h2>
+                    </a>
+                  </article>
+                
+              
+                
+                  <article class="post">
+                    <a href="https://tong-hao.github.io/clock-suan-fa/">
+                      <h2 class="post-title">
+                        Clock算法
+                      </h2>
+                    </a>
+                  </article>
+                
+              
+                
+                  <article class="post">
+                    <a href="https://tong-hao.github.io/llvm-yu-clang-de-guan-xi/">
+                      <h2 class="post-title">
+                        LLVM与clang的关系
+                      </h2>
+                    </a>
+                  </article>
+                
+              
+                
+                  <article class="post">
+                    <a href="https://tong-hao.github.io/acid/">
+                      <h2 class="post-title">
+                        ACID
+                      </h2>
+                    </a>
+                  </article>
+                
+              
+                
+                  <article class="post">
+                    <a href="https://tong-hao.github.io/tu-ji-suan-suan-fa-li-jie-dai-bu-chong/">
+                      <h2 class="post-title">
+                        图计算算法的个人理解【待补充】
+                      </h2>
+                    </a>
+                  </article>
+                
+              
+            
+          </div>
+
+          <div class="pagination-container">
+  
+  
+    <a href="https://tong-hao.github.io/archives/page/2" class="next">下一页 <i class="icon-arrow-ios-forward-outline"></i></a>
+  
+</div>
+
+        </div>
+      </div>
+    </div>
+
+    <script src="https://unpkg.com/aos@next/dist/aos.js"></script>
+<script type="application/javascript">
+
+AOS.init();
+
+var app = new Vue({
+  el: '#app',
+  data: {
+    menuVisible: false,
+  },
+})
+
+</script>
+
+
+  <script src="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.5.1/build/highlight.min.js"></script>
+  <script>
+    hljs.initHighlightingOnLoad()
+  </script>
+
+
+
+
+
+  </body>
+</html>

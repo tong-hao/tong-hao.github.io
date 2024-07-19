@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" >
+
+<title>doris-数据的读取 | Caton Blog</title>
+
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="shortcut icon" href="https://tong-hao.github.io/favicon.ico?v=1721368774787">
+<link rel="stylesheet" href="https://tong-hao.github.io/styles/main.css">
+
+
+
+<link rel="stylesheet" href="https://unpkg.com/aos@next/dist/aos.css" />
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+
+
+
+    <meta name="description" content="
+基础概念
+
+Tablet 分桶
+Rowset 版本数据
+Segment 是文件系统中的一个文件，256M，会拆成多个page
+Page 是一个逻辑概念
+
+
+Doris数据读取流程
+
+Reader-&gt; RowsetReader -&g..." />
+    <meta name="keywords" content="doris" />
+  </head>
+  <body>
+    <div id="app" class="main">
+
+      <div class="sidebar" :class="{ 'full-height': menuVisible }">
+  <div class="top-container" data-aos="fade-right">
+    <div class="top-header-container">
+      <a class="site-title-container" href="https://tong-hao.github.io">
+        <img src="https://tong-hao.github.io/images/avatar.png?v=1721368774787" class="site-logo">
+        <h1 class="site-title">Caton Blog</h1>
+      </a>
+      <div class="menu-btn" @click="menuVisible = !menuVisible">
+        <div class="line"></div>
+      </div>
+    </div>
+    <div>
+      
+        
+          <a href="/" class="site-nav">
+            首页
+          </a>
+        
+      
+        
+          <a href="/archives" class="site-nav">
+            归档
+          </a>
+        
+      
+        
+          <a href="/tags" class="site-nav">
+            标签
+          </a>
+        
+      
+        
+          <a href="/about" class="site-nav">
+            关于
+          </a>
+        
+      
+        
+          <a href="/doris" class="site-nav">
+            #doris
+          </a>
+        
+      
+        
+          <a href="/pg" class="site-nav">
+            #postgresql
+          </a>
+        
+      
+        
+          <a href="/db" class="site-nav">
+            #数据库内核
+          </a>
+        
+      
+        
+          <a href="/graph-computer/" class="site-nav">
+            #图计算
+          </a>
+        
+      
+        
+          <a href="/graph-db" class="site-nav">
+            #图数据库
+          </a>
+        
+      
+    </div>
+  </div>
+  <div class="bottom-container" data-aos="flip-up" data-aos-offset="0">
+    <div class="social-container">
+      
+        
+          <a class="social-link" href="https://github.com/tong-hao" target="_blank">
+            <i class="fab fa-github"></i>
+          </a>
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    </div>
+    <div class="site-description">
+      ✍️一个专注于数据库的博客
+    </div>
+    <div class="site-footer">
+       | <a class="rss" href="https://tong-hao.github.io/atom.xml" target="_blank">RSS</a>
+    </div>
+  </div>
+</div>
+
+
+      <div class="main-container">
+        <div class="content-container" data-aos="fade-up">
+          <div class="post-detail">
+            <h2 class="post-title">doris-数据的读取</h2>
+            <div class="post-date">2024-07-19</div>
+            
+            <div class="post-content" v-pre>
+              <ul>
+<li>基础概念
+<ul>
+<li>Tablet 分桶</li>
+<li>Rowset 版本数据</li>
+<li>Segment 是文件系统中的一个文件，256M，会拆成多个page</li>
+<li>Page 是一个逻辑概念</li>
+</ul>
+</li>
+<li>Doris数据读取流程
+<ul>
+<li><code>Reader</code>-&gt; <code>RowsetReader</code> -&gt; <code>SegmentIterator</code></li>
+<li><img src="https://tong-hao.github.io/post-images/1721367948244.png" alt="" loading="lazy"></li>
+<li>Reader相当于一个表</li>
+<li><code>TupleReader</code>
+<ul>
+<li><code>_direct_next_row</code>  key不排序</li>
+<li><code>_agg_key_next_row</code> key是排序的，可以用于做聚合</li>
+<li><code>_unique_key_next_row</code> key去重</li>
+</ul>
+</li>
+<li><code>CollectIterator</code></li>
+<li><code>RowSetReader</code></li>
+<li><img src="https://tong-hao.github.io/post-images/1721367964487.png" alt="" loading="lazy"></li>
+</ul>
+</li>
+<li>page的结构
+<ul>
+<li><img src="https://tong-hao.github.io/post-images/1721367979430.png" alt="" loading="lazy"></li>
+<li>类型：IndexPage/DataPage/DictionaryPage/ShortKeyPage</li>
+<li>压缩：LZ4、LZ4f、Snappy、Zlib</li>
+</ul>
+</li>
+<li><code>PageCache</code>
+<ul>
+<li>类型：<code>IndexPage</code>, <code>DataPage</code></li>
+<li>策略：LRUCache</li>
+<li>配置：
+<ul>
+<li>storage_page_cache_limit</li>
+<li>index_page_cache_percentage</li>
+<li>disable_storage_page_cache</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>Cache存储
+<ul>
+<li>CacheKey：文件名+offset</li>
+<li>内存结构：双向链表</li>
+<li>引用计数的CacheHandle</li>
+<li>Cache优先级：Normal/Durable
+<ul>
+<li>如果表为in_memmory，PageCache为Durable</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+            </div>
+            
+              <div class="tag-container">
+                
+                  <a href="https://tong-hao.github.io/doris/" class="tag">
+                    doris
+                  </a>
+                
+              </div>
+            
+            
+              <div class="next-post">
+                <div class="next">下一篇</div>
+                <a href="https://tong-hao.github.io/Hxe-2kCjz/">
+                  <h3 class="post-title">
+                    doris-FE与BE的任务交互
+                  </h3>
+                </a>
+              </div>
+            
+
+            
+
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <script src="https://unpkg.com/aos@next/dist/aos.js"></script>
+<script type="application/javascript">
+
+AOS.init();
+
+var app = new Vue({
+  el: '#app',
+  data: {
+    menuVisible: false,
+  },
+})
+
+</script>
+
+
+  <script src="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.5.1/build/highlight.min.js"></script>
+  <script>
+    hljs.initHighlightingOnLoad()
+  </script>
+
+
+
+
+
+  </body>
+</html>
