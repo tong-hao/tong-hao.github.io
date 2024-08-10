@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" >
+
+<title>pg-代码-事务ID回绕问题 | Caton Blog</title>
+
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="shortcut icon" href="https://tong-hao.github.io/favicon.ico?v=1723274616057">
+<link rel="stylesheet" href="https://tong-hao.github.io/styles/main.css">
+
+
+
+<link rel="stylesheet" href="https://unpkg.com/aos@next/dist/aos.css" />
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+
+
+
+    <meta name="description" content="pg为了减少存储空间，将事务ID设置为uint32。但是如果数据量超过40亿就会出问题，无法比较事务的先后。
+为了解决这个问题，pg提供了TransactionIdPrecedes函数进行判断事务的先后。
+代码如下：
+#include &l..." />
+    <meta name="keywords" content="postgresql" />
+  </head>
+  <body>
+    <div id="app" class="main">
+
+      <div class="sidebar" :class="{ 'full-height': menuVisible }">
+  <div class="top-container" data-aos="fade-right">
+    <div class="top-header-container">
+      <a class="site-title-container" href="https://tong-hao.github.io">
+        <img src="https://tong-hao.github.io/images/avatar.png?v=1723274616057" class="site-logo">
+        <h1 class="site-title">Caton Blog</h1>
+      </a>
+      <div class="menu-btn" @click="menuVisible = !menuVisible">
+        <div class="line"></div>
+      </div>
+    </div>
+    <div>
+      
+        
+          <a href="/" class="site-nav">
+            首页
+          </a>
+        
+      
+        
+          <a href="/archives" class="site-nav">
+            归档
+          </a>
+        
+      
+        
+          <a href="/tags" class="site-nav">
+            标签
+          </a>
+        
+      
+        
+          <a href="/about" class="site-nav">
+            关于
+          </a>
+        
+      
+        
+          <a href="/doris" class="site-nav">
+            #doris
+          </a>
+        
+      
+        
+          <a href="/pg" class="site-nav">
+            #postgresql
+          </a>
+        
+      
+        
+          <a href="/db" class="site-nav">
+            #数据库内核
+          </a>
+        
+      
+        
+          <a href="/graph-computer/" class="site-nav">
+            #图计算
+          </a>
+        
+      
+        
+          <a href="/graph-db" class="site-nav">
+            #图数据库
+          </a>
+        
+      
+        
+          <a href="/creation" class="site-nav">
+            #个人作品
+          </a>
+        
+      
+    </div>
+  </div>
+  <div class="bottom-container" data-aos="flip-up" data-aos-offset="0">
+    <div class="social-container">
+      
+        
+          <a class="social-link" href="https://github.com/tong-hao" target="_blank">
+            <i class="fab fa-github"></i>
+          </a>
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    </div>
+    <div class="site-description">
+      ✍️一个专注于数据库的博客
+    </div>
+    <div class="site-footer">
+       | <a class="rss" href="https://tong-hao.github.io/atom.xml" target="_blank">RSS</a>
+    </div>
+  </div>
+</div>
+
+
+      <div class="main-container">
+        <div class="content-container" data-aos="fade-up">
+          <div class="post-detail">
+            <h2 class="post-title">pg-代码-事务ID回绕问题</h2>
+            <div class="post-date">2024-06-19</div>
+            
+            <div class="post-content" v-pre>
+              <p>pg为了减少存储空间，将事务ID设置为uint32。但是如果数据量超过40亿就会出问题，无法比较事务的先后。<br>
+为了解决这个问题，pg提供了<code>TransactionIdPrecedes</code>函数进行判断事务的先后。</p>
+<p>代码如下：</p>
+<pre><code class="language-c">#include &lt;iostream&gt;
+
+using TransactionId = uint32_t;
+using int32 = int32_t;
+
+bool TransactionIdIsNormal(TransactionId id) {
+	return id &gt;= 3;
+}
+
+bool TransactionIdPrecedes(TransactionId id1, TransactionId id2) {
+	/*
+	 * If either ID is a permanent XID then we can just do unsigned
+	 * comparison.	If both are normal, do a modulo-2^31 comparison.
+	 */
+	int32 diff;
+
+	if (!TransactionIdIsNormal(id1) || !TransactionIdIsNormal(id2))
+		return (id1 &lt; id2);
+
+	diff = (int32)(id1 - id2);
+	return (diff &lt; 0);
+}
+
+int main() {
+	TransactionId id = (1 &lt;&lt; 31) + 1000000;
+	std::cout &lt;&lt; TransactionIdPrecedes(11, 100) &lt;&lt; std::endl;  // true
+	std::cout &lt;&lt; TransactionIdPrecedes(11, id)
+	          &lt;&lt; std::endl;  // false, 因为 11 - （2^31+1000000)
+	                         // 会超过int32的范围，会回绕。 得到的结果是一个正数
+	std::cout &lt;&lt; TransactionIdPrecedes(1, id) &lt;&lt; std::endl;
+	return 0;
+}
+</code></pre>
+<ul>
+<li><code>TransactionIdPrecedes</code> 函数是pg中的代码，用于判断事务id1是否先于id2</li>
+<li>关键代码 <code>diff = (int32)(id1 - id2);</code> 如果 <code>id1 - id2</code> 不在 int32的范围<code>[-2^32, 2^32-1]</code> 范围就会进行回绕。比如：2^31+100 转成int32 就会是负数。</li>
+</ul>
+
+            </div>
+            
+              <div class="tag-container">
+                
+                  <a href="https://tong-hao.github.io/pg/" class="tag">
+                    postgresql
+                  </a>
+                
+              </div>
+            
+            
+              <div class="next-post">
+                <div class="next">下一篇</div>
+                <a href="https://tong-hao.github.io/W2MNdGp8Q/">
+                  <h3 class="post-title">
+                    pg-堆文件结构
+                  </h3>
+                </a>
+              </div>
+            
+
+            
+
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <script src="https://unpkg.com/aos@next/dist/aos.js"></script>
+<script type="application/javascript">
+
+AOS.init();
+
+var app = new Vue({
+  el: '#app',
+  data: {
+    menuVisible: false,
+  },
+})
+
+</script>
+
+
+  <script src="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.5.1/build/highlight.min.js"></script>
+  <script>
+    hljs.initHighlightingOnLoad()
+  </script>
+
+
+
+
+
+  </body>
+</html>

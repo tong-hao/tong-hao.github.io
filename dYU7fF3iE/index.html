@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" >
+
+<title>pg-Buffer Manager的锁 | Caton Blog</title>
+
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="shortcut icon" href="https://tong-hao.github.io/favicon.ico?v=1723274616057">
+<link rel="stylesheet" href="https://tong-hao.github.io/styles/main.css">
+
+
+
+<link rel="stylesheet" href="https://unpkg.com/aos@next/dist/aos.css" />
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+
+
+
+    <meta name="description" content="buffer table锁
+
+BufMappingLock用在buffer table中
+分为共享模式和排他模式
+
+查询数据用共享模式
+插入和删除使用排他模式
+
+
+BufMappingLock会将所有的slot分成128个partition..." />
+    <meta name="keywords" content="postgresql" />
+  </head>
+  <body>
+    <div id="app" class="main">
+
+      <div class="sidebar" :class="{ 'full-height': menuVisible }">
+  <div class="top-container" data-aos="fade-right">
+    <div class="top-header-container">
+      <a class="site-title-container" href="https://tong-hao.github.io">
+        <img src="https://tong-hao.github.io/images/avatar.png?v=1723274616057" class="site-logo">
+        <h1 class="site-title">Caton Blog</h1>
+      </a>
+      <div class="menu-btn" @click="menuVisible = !menuVisible">
+        <div class="line"></div>
+      </div>
+    </div>
+    <div>
+      
+        
+          <a href="/" class="site-nav">
+            首页
+          </a>
+        
+      
+        
+          <a href="/archives" class="site-nav">
+            归档
+          </a>
+        
+      
+        
+          <a href="/tags" class="site-nav">
+            标签
+          </a>
+        
+      
+        
+          <a href="/about" class="site-nav">
+            关于
+          </a>
+        
+      
+        
+          <a href="/doris" class="site-nav">
+            #doris
+          </a>
+        
+      
+        
+          <a href="/pg" class="site-nav">
+            #postgresql
+          </a>
+        
+      
+        
+          <a href="/db" class="site-nav">
+            #数据库内核
+          </a>
+        
+      
+        
+          <a href="/graph-computer/" class="site-nav">
+            #图计算
+          </a>
+        
+      
+        
+          <a href="/graph-db" class="site-nav">
+            #图数据库
+          </a>
+        
+      
+        
+          <a href="/creation" class="site-nav">
+            #个人作品
+          </a>
+        
+      
+    </div>
+  </div>
+  <div class="bottom-container" data-aos="flip-up" data-aos-offset="0">
+    <div class="social-container">
+      
+        
+          <a class="social-link" href="https://github.com/tong-hao" target="_blank">
+            <i class="fab fa-github"></i>
+          </a>
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    </div>
+    <div class="site-description">
+      ✍️一个专注于数据库的博客
+    </div>
+    <div class="site-footer">
+       | <a class="rss" href="https://tong-hao.github.io/atom.xml" target="_blank">RSS</a>
+    </div>
+  </div>
+</div>
+
+
+      <div class="main-container">
+        <div class="content-container" data-aos="fade-up">
+          <div class="post-detail">
+            <h2 class="post-title">pg-Buffer Manager的锁</h2>
+            <div class="post-date">2024-06-11</div>
+            
+            <div class="post-content" v-pre>
+              <h2 id="buffer-table锁">buffer table锁</h2>
+<ul>
+<li>BufMappingLock用在buffer table中</li>
+<li>分为共享模式和排他模式
+<ul>
+<li>查询数据用共享模式</li>
+<li>插入和删除使用排他模式</li>
+</ul>
+</li>
+<li>BufMappingLock会将所有的slot分成128个partition，每个锁对应一个partition</li>
+</ul>
+<h2 id="buffer-descriptor中的锁">Buffer Descriptor中的锁</h2>
+<ul>
+<li>Buffer Descriptor中使用了两种锁：content_lock 和 io_in_progress_lock（9.6版本之前），在9.6之后使用cpu的原子交换替代这些锁。</li>
+<li>content_lock可以用于共享模式和排他模式</li>
+<li>io_in_progress_lock 用于等待I/O，处理数据的加载和写入</li>
+</ul>
+
+            </div>
+            
+              <div class="tag-container">
+                
+                  <a href="https://tong-hao.github.io/pg/" class="tag">
+                    postgresql
+                  </a>
+                
+              </div>
+            
+            
+              <div class="next-post">
+                <div class="next">下一篇</div>
+                <a href="https://tong-hao.github.io/NQ9UtOZSH/">
+                  <h3 class="post-title">
+                     pg-Buffer Manager的结构
+                  </h3>
+                </a>
+              </div>
+            
+
+            
+
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <script src="https://unpkg.com/aos@next/dist/aos.js"></script>
+<script type="application/javascript">
+
+AOS.init();
+
+var app = new Vue({
+  el: '#app',
+  data: {
+    menuVisible: false,
+  },
+})
+
+</script>
+
+
+  <script src="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.5.1/build/highlight.min.js"></script>
+  <script>
+    hljs.initHighlightingOnLoad()
+  </script>
+
+
+
+
+
+  </body>
+</html>

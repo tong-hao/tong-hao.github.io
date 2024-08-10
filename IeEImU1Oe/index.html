@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" >
+
+<title>LSM Tree | Caton Blog</title>
+
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="shortcut icon" href="https://tong-hao.github.io/favicon.ico?v=1723274616057">
+<link rel="stylesheet" href="https://tong-hao.github.io/styles/main.css">
+
+
+
+<link rel="stylesheet" href="https://unpkg.com/aos@next/dist/aos.css" />
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+
+
+
+    <meta name="description" content="内存与外存
+LSM 有两部分构成：
+
+内存
+外存
+
+内存有：Memtable（内存表）、Immutable Memtable（只读内存表）
+外存有很多层，每层有很多SSTable文件，SSTable文件是kv格式，并按照Key排序的，L0的..." />
+    <meta name="keywords" content="数据库,算法" />
+  </head>
+  <body>
+    <div id="app" class="main">
+
+      <div class="sidebar" :class="{ 'full-height': menuVisible }">
+  <div class="top-container" data-aos="fade-right">
+    <div class="top-header-container">
+      <a class="site-title-container" href="https://tong-hao.github.io">
+        <img src="https://tong-hao.github.io/images/avatar.png?v=1723274616057" class="site-logo">
+        <h1 class="site-title">Caton Blog</h1>
+      </a>
+      <div class="menu-btn" @click="menuVisible = !menuVisible">
+        <div class="line"></div>
+      </div>
+    </div>
+    <div>
+      
+        
+          <a href="/" class="site-nav">
+            首页
+          </a>
+        
+      
+        
+          <a href="/archives" class="site-nav">
+            归档
+          </a>
+        
+      
+        
+          <a href="/tags" class="site-nav">
+            标签
+          </a>
+        
+      
+        
+          <a href="/about" class="site-nav">
+            关于
+          </a>
+        
+      
+        
+          <a href="/doris" class="site-nav">
+            #doris
+          </a>
+        
+      
+        
+          <a href="/pg" class="site-nav">
+            #postgresql
+          </a>
+        
+      
+        
+          <a href="/db" class="site-nav">
+            #数据库内核
+          </a>
+        
+      
+        
+          <a href="/graph-computer/" class="site-nav">
+            #图计算
+          </a>
+        
+      
+        
+          <a href="/graph-db" class="site-nav">
+            #图数据库
+          </a>
+        
+      
+        
+          <a href="/creation" class="site-nav">
+            #个人作品
+          </a>
+        
+      
+    </div>
+  </div>
+  <div class="bottom-container" data-aos="flip-up" data-aos-offset="0">
+    <div class="social-container">
+      
+        
+          <a class="social-link" href="https://github.com/tong-hao" target="_blank">
+            <i class="fab fa-github"></i>
+          </a>
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    </div>
+    <div class="site-description">
+      ✍️一个专注于数据库的博客
+    </div>
+    <div class="site-footer">
+       | <a class="rss" href="https://tong-hao.github.io/atom.xml" target="_blank">RSS</a>
+    </div>
+  </div>
+</div>
+
+
+      <div class="main-container">
+        <div class="content-container" data-aos="fade-up">
+          <div class="post-detail">
+            <h2 class="post-title">LSM Tree</h2>
+            <div class="post-date">2024-06-01</div>
+            
+            <div class="post-content" v-pre>
+              <h2 id="内存与外存">内存与外存</h2>
+<p>LSM 有两部分构成：</p>
+<ul>
+<li>内存</li>
+<li>外存</li>
+</ul>
+<p>内存有：Memtable（内存表）、Immutable Memtable（只读内存表）<br>
+外存有很多层，每层有很多SSTable文件，SSTable文件是kv格式，并按照Key排序的，L0的Key的范围会存在重叠。</p>
+<h2 id="写入流程">写入流程</h2>
+<figure data-type="image" tabindex="1"><img src="https://tong-hao.github.io/post-images/1717209422364.webp" alt="" loading="lazy"></figure>
+<ul>
+<li>添加、删除、修改记录时，先写log</li>
+<li>再写 <code>Memtable</code>，<code>Memtable</code> 满了后会成为<code>Immutable Memtable</code> 。</li>
+<li>然后将<code>Immutable Memtable</code>写入sst文件</li>
+<li>定时进行compaction，合并sst</li>
+</ul>
+<h2 id="insertupdatedelete">insert/update/delete</h2>
+<ul>
+<li>对于  insert  直接写入新的kv</li>
+<li>对于 update 则写入修改后的kv</li>
+<li>对于 delete 则写入一条 tombstone 标记删除的记录</li>
+</ul>
+<h2 id="compaction类别">compaction类别</h2>
+<ul>
+<li>一是memtable写满后flush到磁盘，这是一种特殊的compacttion，也称为minor compaction。</li>
+<li>二是从L0 层开始往下层合并数据，也被称为major compaction，也是常说的compaction。</li>
+</ul>
+<h2 id="compaction触发条件">compaction触发条件</h2>
+<ul>
+<li>内存Memtable满了，触发 minor compaction</li>
+<li>WAL写入日志达到一定的大小</li>
+<li>sst文件太多</li>
+<li>磁盘空间不足</li>
+<li>定期时间间隔</li>
+</ul>
+<h2 id="参考">参考</h2>
+<ul>
+<li><a href="https://tidb.net/blog/eedf77ff">专栏 - 带你全面了解compaction 的13个问题 | TiDB 社区</a></li>
+<li><a href="https://github.com/facebook/rocksdb/wiki/Compaction">Compaction · facebook/rocksdb Wiki · GitHub</a></li>
+</ul>
+
+            </div>
+            
+              <div class="tag-container">
+                
+                  <a href="https://tong-hao.github.io/db/" class="tag">
+                    数据库
+                  </a>
+                
+                  <a href="https://tong-hao.github.io/algo/" class="tag">
+                    算法
+                  </a>
+                
+              </div>
+            
+            
+              <div class="next-post">
+                <div class="next">下一篇</div>
+                <a href="https://tong-hao.github.io/CQYsHZjKf/">
+                  <h3 class="post-title">
+                    go lang学习笔记
+                  </h3>
+                </a>
+              </div>
+            
+
+            
+
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <script src="https://unpkg.com/aos@next/dist/aos.js"></script>
+<script type="application/javascript">
+
+AOS.init();
+
+var app = new Vue({
+  el: '#app',
+  data: {
+    menuVisible: false,
+  },
+})
+
+</script>
+
+
+  <script src="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.5.1/build/highlight.min.js"></script>
+  <script>
+    hljs.initHighlightingOnLoad()
+  </script>
+
+
+
+
+
+  </body>
+</html>

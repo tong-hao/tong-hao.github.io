@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" >
+
+<title>go lang学习笔记 | Caton Blog</title>
+
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="shortcut icon" href="https://tong-hao.github.io/favicon.ico?v=1723274616057">
+<link rel="stylesheet" href="https://tong-hao.github.io/styles/main.css">
+
+
+
+<link rel="stylesheet" href="https://unpkg.com/aos@next/dist/aos.css" />
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+
+
+
+    <meta name="description" content="基本数据类型
+bool、int、float、string
+uint8、uint16、uint32、uint64
+int8...int64
+float32 float64
+变量 &amp; 常量
+声明：
+var name int //第一种
+..." />
+    <meta name="keywords" content="golang" />
+  </head>
+  <body>
+    <div id="app" class="main">
+
+      <div class="sidebar" :class="{ 'full-height': menuVisible }">
+  <div class="top-container" data-aos="fade-right">
+    <div class="top-header-container">
+      <a class="site-title-container" href="https://tong-hao.github.io">
+        <img src="https://tong-hao.github.io/images/avatar.png?v=1723274616057" class="site-logo">
+        <h1 class="site-title">Caton Blog</h1>
+      </a>
+      <div class="menu-btn" @click="menuVisible = !menuVisible">
+        <div class="line"></div>
+      </div>
+    </div>
+    <div>
+      
+        
+          <a href="/" class="site-nav">
+            首页
+          </a>
+        
+      
+        
+          <a href="/archives" class="site-nav">
+            归档
+          </a>
+        
+      
+        
+          <a href="/tags" class="site-nav">
+            标签
+          </a>
+        
+      
+        
+          <a href="/about" class="site-nav">
+            关于
+          </a>
+        
+      
+        
+          <a href="/doris" class="site-nav">
+            #doris
+          </a>
+        
+      
+        
+          <a href="/pg" class="site-nav">
+            #postgresql
+          </a>
+        
+      
+        
+          <a href="/db" class="site-nav">
+            #数据库内核
+          </a>
+        
+      
+        
+          <a href="/graph-computer/" class="site-nav">
+            #图计算
+          </a>
+        
+      
+        
+          <a href="/graph-db" class="site-nav">
+            #图数据库
+          </a>
+        
+      
+        
+          <a href="/creation" class="site-nav">
+            #个人作品
+          </a>
+        
+      
+    </div>
+  </div>
+  <div class="bottom-container" data-aos="flip-up" data-aos-offset="0">
+    <div class="social-container">
+      
+        
+          <a class="social-link" href="https://github.com/tong-hao" target="_blank">
+            <i class="fab fa-github"></i>
+          </a>
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    </div>
+    <div class="site-description">
+      ✍️一个专注于数据库的博客
+    </div>
+    <div class="site-footer">
+       | <a class="rss" href="https://tong-hao.github.io/atom.xml" target="_blank">RSS</a>
+    </div>
+  </div>
+</div>
+
+
+      <div class="main-container">
+        <div class="content-container" data-aos="fade-up">
+          <div class="post-detail">
+            <h2 class="post-title">go lang学习笔记</h2>
+            <div class="post-date">2024-06-01</div>
+            
+            <div class="post-content" v-pre>
+              <h2 id="基本数据类型">基本数据类型</h2>
+<p>bool、int、float、string<br>
+uint8、uint16、uint32、uint64<br>
+int8...int64<br>
+float32 float64</p>
+<h2 id="变量-常量">变量 &amp; 常量</h2>
+<p>声明：</p>
+<pre><code class="language-go">var name int //第一种
+var name = 1 //第二种
+name := 1    //第三种，自动判断类型
+
+var vname1, vname2, vname3 type
+vname1, vname2, vname3 = v1, v2, v3
+
+// 注意：
+vname1, vname2, vname3 := v1, v2, v3 //出现在:=左侧的变量不应该是已经被声明过的，否则会导致编译错误
+
+var (
+    vname1 v_type1
+    vname2 v_type2
+)
+</code></pre>
+<p>常量：</p>
+<pre><code>const identifier [type] = value
+
+//如：
+const name1 = 1
+
+// 枚举
+const (
+    a = iota
+    b
+    c
+)
+</code></pre>
+<h2 id="运算符">运算符</h2>
+<p>Go 语言内置的运算符有：<br>
+算术运算符<br>
+关系运算符<br>
+逻辑运算符<br>
+位运算符<br>
+赋值运算符<br>
+其他运算符</p>
+<h2 id="类型转换">类型转换</h2>
+<p>type_name(expression)</p>
+<h2 id="指针">指针</h2>
+<pre><code>var var_name *var-type
+
+例如：
+var a int= 20   /* 声明实际变量 */
+var ip *int     /* 声明指针变量 */
+ip = &amp;a  				/* 指针变量的存储地址 */
+
+nil  空指针。
+
+指针数组：
+   var ptr [MAX]*int
+   for  i = 0; i &lt; MAX; i++ {
+      ptr[i] = &amp;a[i] /* 整数地址赋值给指针数组 */
+   }
+</code></pre>
+<h2 id="函数">函数</h2>
+<pre><code>func function_name( [parameter list] ) [return_types]{
+   函数体
+}
+
+/* 函数返回两个数的最大值 */
+func max(num1, num2 int) int{
+   /* 声明局部变量 */
+   var result int
+
+   if (num1 &gt; num2) {
+      result = num1
+   } else {
+      result = num2
+   }
+   return result 
+}
+</code></pre>
+<h2 id="数组-切片-map">数组 &amp; 切片 &amp; Map</h2>
+<pre><code>var variable_name [SIZE] variable_type
+
+例如：
+var balance [10] float32
+var balance = [5]float32{1000.0, 2.0, 3.4, 7.0, 50.0}
+balance[4] = 50.0
+
+func getAverage(arr []int,size int) float32{
+}
+
+</code></pre>
+<p>切片：</p>
+<pre><code>var slice1 []type = make([]type, len)
+slice1 := make([]type, len)
+
+如：
+var numbers = make([]int,3,5)
+s :=[] int {1,2,3 } 
+</code></pre>
+<p>切片是可索引的，并且可以由 len() 方法获取长度。<br>
+切片提供了计算容量的方法 cap() 可以测量切片最长可以达到多少。<br>
+空(nil)切片</p>
+<p>Map:</p>
+<pre><code>var countryCapitalMap map[string]string
+countryCapitalMap = make(map[string]string)
+countryCapitalMap[&quot;France&quot;] = &quot;Paris&quot;
+
+ for country := range countryCapitalMap {
+      fmt.Println(&quot;Capital of&quot;,country,&quot;is&quot;,countryCapitalMap[country])
+   }
+
+captial, ok := countryCapitalMap[&quot;United States&quot;]
+
+delete(countryCapitalMap,&quot;France&quot;);
+
+</code></pre>
+<h2 id="条件-循环">条件 &amp; 循环</h2>
+<p>条件：</p>
+<pre><code>if true {
+//
+} else if true {
+//
+} else {
+//
+}
+
+switch var1 {
+    case val1:
+        ...
+    case val2:
+        ...
+    default:
+        ...
+}
+
+
+
+</code></pre>
+<p>循环：</p>
+<pre><code>for init; condition; post { }
+for condition { }
+for { }
+for key, value := range oldMap {
+    newMap[key] = value
+}
+
+// 例如：
+numbers := [6]int{1, 2, 3, 5} 
+for a := 0; a &lt; 10; a++ {
+   fmt.Printf(&quot;a 的值为: %d\n&quot;, a)
+}
+for a &lt; b {
+  a++
+  fmt.Printf(&quot;a 的值为: %d\n&quot;, a)
+}
+for i,x:= range numbers {
+  fmt.Printf(&quot;第 %d 位 x 的值 = %d\n&quot;, i,x)
+} 
+</code></pre>
+<h2 id="结构体">结构体</h2>
+<pre><code>type Books struct {
+   title string
+   author string
+   subject string
+   book_id int
+}
+var Book1 Books
+Book1.title = &quot;Go 语言&quot;
+
+指针：
+Book2 *Books
+Book2 = &amp;Book1
+Book2.title = &quot;xxx&quot;
+</code></pre>
+<h2 id="接口">接口</h2>
+<pre><code>type Phone interface {
+    call()
+}
+
+type NokiaPhone struct {
+}
+
+func (nokiaPhone NokiaPhone) call() {
+    fmt.Println(&quot;I am Nokia, I can call you!&quot;)
+}
+type IPhone struct {
+}
+
+func (iPhone IPhone) call() {
+    fmt.Println(&quot;I am iPhone, I can call you!&quot;)
+}
+
+func main() {
+    var phone Phone
+
+    phone = new(NokiaPhone)
+    phone.call()
+
+    phone = new(IPhone)
+    phone.call()
+
+}
+</code></pre>
+<h2 id="错误">错误</h2>
+<pre><code>func Sqrt(f float64) (float64, error) {
+    if f &lt; 0 {
+        return 0, errors.New(&quot;math: square root of negative number&quot;)
+    }
+    // 实现
+}
+
+result, err:= Sqrt(-1)
+if err != nil {
+   fmt.Println(err)
+}
+</code></pre>
+<h2 id="反射">反射</h2>
+<p>TypeOf &amp; ValueOf</p>
+<pre><code>import &quot;reflect&quot;
+
+var isbook bool = true
+reflect.TypeOf(isbook)
+reflect.ValueOf(isbook)
+</code></pre>
+<pre><code>
+func setvalue1(x interface{}){
+	v := reflect.ValueOf(x)
+	if value.Kind() == reflect.String {
+		value.SetString(&quot;changed&quot;)
+	}
+}
+
+// 指针
+func setvalue2(x interface{}){
+	v := reflect.ValueOf(x)
+	if value.Elem().Kind() == reflect.String {
+		value.Elem().SetString(&quot;changed&quot;)
+	}
+}
+
+str1 := &quot;hello&quot;
+setvalue1(str1)
+setvalue2(&amp;str1)
+
+</code></pre>
+<h2 id="并发">并发</h2>
+<pre><code>go hello() 
+fmt.Println(&quot;01&quot;)
+
+time.Sleep(time.Second) // 等待1秒
+</code></pre>
+<h3 id="syncwaitgroup">sync.WaitGroup</h3>
+<pre><code>import (&quot;fmt&quot;
+				&quot;sync&quot;
+)
+
+var wg sync.WaitGroup
+func hello(){
+	fmt.Println(&quot;hello&quot;)
+	defer wg.Done() // -1
+}
+
+wg.Add(1) // +1
+go hello()
+wg.Wait() // 阻塞，直到为0
+
+</code></pre>
+<h3 id="channel">channel</h3>
+<pre><code>var a chan int
+a := make(chan int, 10) // 缓冲大小为10
+a &lt;- 10 // 把10发送给a通道
+x := &lt;- a // 从a通道取一个值
+close(a) // 关闭通道
+
+for i := range a {
+	fmt.Printf(&quot;i=%v&quot;, i)
+}
+</code></pre>
+<h3 id="select">select</h3>
+<pre><code>a := make(chan int, 10)
+for i:=1;i &lt; 10; i++{
+	select {
+		case x:= &lt;-a // 接收
+			fmt.Println(x)
+		case a &lt;- i: // 发送
+	}
+}
+
+</code></pre>
+<h3 id="互斥锁">互斥锁</h3>
+<pre><code>
+var wg sync.WaitGroup
+var m sync.Mutex // 锁
+var v int
+
+func add(){
+	for i:=0;i &lt; 5000;i++ {
+		m.lock()
+		v++
+		m.unlock()
+	}
+	wg.Done()
+}
+
+wg.Add(2)
+go add()
+go add()
+wg.Wait()
+
+</code></pre>
+<h3 id="读写锁">读写锁</h3>
+<pre><code>var wg sync.WaitGroup
+var m sync.RWMutex // 读写锁
+var v int
+
+func add(){
+	for i:=0;i &lt; 5000;i++ {
+		m.lock()
+		v++
+		m.unlock()
+	}
+	wg.Done()
+}
+
+func read(){
+	defer wg.Done()
+	m.RLock()
+	fmt.Println(x)
+	time.Sleep(time.Millisecond)
+	m.RUnlock()
+}
+
+wg.Add(2)
+go add()
+go add()
+
+for i:=0;i&lt;10;i++ {
+	go read()
+	wa.Add(1)
+}
+wg.Wait()
+
+</code></pre>
+
+            </div>
+            
+              <div class="tag-container">
+                
+                  <a href="https://tong-hao.github.io/xT8vE1Dxk/" class="tag">
+                    golang
+                  </a>
+                
+              </div>
+            
+            
+              <div class="next-post">
+                <div class="next">下一篇</div>
+                <a href="https://tong-hao.github.io/GwkSCpI8z/">
+                  <h3 class="post-title">
+                    duckdb
+                  </h3>
+                </a>
+              </div>
+            
+
+            
+
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <script src="https://unpkg.com/aos@next/dist/aos.js"></script>
+<script type="application/javascript">
+
+AOS.init();
+
+var app = new Vue({
+  el: '#app',
+  data: {
+    menuVisible: false,
+  },
+})
+
+</script>
+
+
+  <script src="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.5.1/build/highlight.min.js"></script>
+  <script>
+    hljs.initHighlightingOnLoad()
+  </script>
+
+
+
+
+
+  </body>
+</html>

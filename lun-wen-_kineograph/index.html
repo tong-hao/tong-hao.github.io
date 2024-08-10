@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" >
+
+<title>论文_kineograph | Caton Blog</title>
+
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="shortcut icon" href="https://tong-hao.github.io/favicon.ico?v=1723274616057">
+<link rel="stylesheet" href="https://tong-hao.github.io/styles/main.css">
+
+
+
+<link rel="stylesheet" href="https://unpkg.com/aos@next/dist/aos.css" />
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+
+
+
+    <meta name="description" content="
+参考：《Kineograph: Taking the Pulse of a Fast-Changing and Connected World》
+
+1. 前言
+1.1 kineograph是什么？
+kineograph是一个支持流数据的、..." />
+    <meta name="keywords" content="图计算,论文" />
+  </head>
+  <body>
+    <div id="app" class="main">
+
+      <div class="sidebar" :class="{ 'full-height': menuVisible }">
+  <div class="top-container" data-aos="fade-right">
+    <div class="top-header-container">
+      <a class="site-title-container" href="https://tong-hao.github.io">
+        <img src="https://tong-hao.github.io/images/avatar.png?v=1723274616057" class="site-logo">
+        <h1 class="site-title">Caton Blog</h1>
+      </a>
+      <div class="menu-btn" @click="menuVisible = !menuVisible">
+        <div class="line"></div>
+      </div>
+    </div>
+    <div>
+      
+        
+          <a href="/" class="site-nav">
+            首页
+          </a>
+        
+      
+        
+          <a href="/archives" class="site-nav">
+            归档
+          </a>
+        
+      
+        
+          <a href="/tags" class="site-nav">
+            标签
+          </a>
+        
+      
+        
+          <a href="/about" class="site-nav">
+            关于
+          </a>
+        
+      
+        
+          <a href="/doris" class="site-nav">
+            #doris
+          </a>
+        
+      
+        
+          <a href="/pg" class="site-nav">
+            #postgresql
+          </a>
+        
+      
+        
+          <a href="/db" class="site-nav">
+            #数据库内核
+          </a>
+        
+      
+        
+          <a href="/graph-computer/" class="site-nav">
+            #图计算
+          </a>
+        
+      
+        
+          <a href="/graph-db" class="site-nav">
+            #图数据库
+          </a>
+        
+      
+        
+          <a href="/creation" class="site-nav">
+            #个人作品
+          </a>
+        
+      
+    </div>
+  </div>
+  <div class="bottom-container" data-aos="flip-up" data-aos-offset="0">
+    <div class="social-container">
+      
+        
+          <a class="social-link" href="https://github.com/tong-hao" target="_blank">
+            <i class="fab fa-github"></i>
+          </a>
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    </div>
+    <div class="site-description">
+      ✍️一个专注于数据库的博客
+    </div>
+    <div class="site-footer">
+       | <a class="rss" href="https://tong-hao.github.io/atom.xml" target="_blank">RSS</a>
+    </div>
+  </div>
+</div>
+
+
+      <div class="main-container">
+        <div class="content-container" data-aos="fade-up">
+          <div class="post-detail">
+            <h2 class="post-title">论文_kineograph</h2>
+            <div class="post-date">2024-06-01</div>
+            
+            <div class="post-content" v-pre>
+              <blockquote>
+<p>参考：《Kineograph: Taking the Pulse of a Fast-Changing and Connected World》</p>
+</blockquote>
+<h2 id="1-前言">1. 前言</h2>
+<h3 id="11-kineograph是什么">1.1 kineograph是什么？</h3>
+<p>kineograph是一个支持流数据的、支持自定义挖掘算法、支持增量计算的分布式图计算系统。<br>
+kineograph是一个分布式内存系统。</p>
+<h3 id="12-概念">1.2 概念</h3>
+<ul>
+<li>epoch</li>
+<li>global logic clock  逻辑时钟</li>
+<li>snapshoot 快照</li>
+</ul>
+<h2 id="2-架构">2. 架构</h2>
+<figure data-type="image" tabindex="1"><img src="https://tong-hao.github.io/post-images/1717199587847.webp" alt="" loading="lazy"></figure>
+<h3 id="21-组件">2.1 组件</h3>
+<ul>
+<li>RawData 数据流</li>
+<li>IngestNode 用于解析数据，并创建transanction</li>
+<li>ProgressTable 用于记录数据处理的状态</li>
+<li>Snapshooter 协同graph node和ingest node 创建snapshoot。</li>
+<li>GraphNode
+<ul>
+<li>GraphStructure 存储顶点和边的关系数据</li>
+<li>AssociatedData 存储图计算结果</li>
+<li>Computation 图计算模块</li>
+</ul>
+</li>
+</ul>
+<h3 id="22-运行原理">2.2 运行原理</h3>
+<p>step 1:  RawData数据流进IngestNode，IngestNode解析数据，创建图更新操作的transaction，同时为事务分配事务ID。<br>
+step 2:  IngestNode将事务提交到GraphNode。<br>
+step 3:  IngestNode将存储进度写入ProgressTable<br>
+step 4:  Snapshooter根据ProgressTable，指导所有的GraphNode创建一个snapshoot。<br>
+step 5: GraphNode会提交本地的update，创建一个snapshoot<br>
+step 6: snapshoot创建后，会触发图计算模块跑算法，将结果写入AssociatedData</p>
+<p>补充：<br>
+GraphNode使用分布式内存KV存储图关系数据。<br>
+图的存储结构采用邻接表的形式。图存储支持为每个项目创建snapshoot。</p>
+<h2 id="3-如何创建snapshoot">3. 如何创建snapshoot？</h2>
+<h3 id="31-存储层">3.1 存储层</h3>
+<ul>
+<li>GraphNode包括存储层和计算层。</li>
+<li>存储层采用固定的分区数量（如：512），使用Hash算法进行分区，每个分区中包括了顶点和顶点对应的边。（和Nebula的存储方式类似）</li>
+<li>每个顶点有一个字段用于存储图计算的结果，该字段不限制类型，只有可以序列化即可。</li>
+</ul>
+<h3 id="32-snapshoot关键功能">3.2 snapshoot（关键功能）</h3>
+<ul>
+<li>
+<p>snapshoot机制是通过IngestNode、GraphNode、ProgressTable 协作完成。</p>
+</li>
+<li>
+<p>IngestNode不是简单的解析数据为图数据执行提交，更重要的是将输入数据流转化到一个事务中，每个事务有事务ID，每个事务跨多个partition。比如：在part1上增加v1到v2的出边，在part2上增加v2到v1的入边，两个操作在同一个事务完成。</p>
+</li>
+<li>
+<p>每个IngestNode 创建了一系列的事务，每个事务有事务ID。事务ID是一个自增的序列号。</p>
+</li>
+<li>
+<p>每个IngestNode 将数据流转化为图数据并分配事务ID，提交给各个GraphNode。GraphNode会给IngestNode回一个ack，ack中携带了事务ID，表明该事务ID之前的在该GraphNode上的所有事务均提交成功。如果该IngestNode 收到所有GraphNode的事务ID（TX1），则在ProgressTable中更新为TX1。各个GraphNode上更新操作是按事务ID顺序完成的。</p>
+</li>
+<li>
+<p>ProgressTable中第一列为IngestNode的编号，第二列为各个IngestNode上执行完成的事务ID。</p>
+</li>
+<li>
+<p>GraphNode上分多个partition，每个partition上按IngestNode分组保存图的更新数据。按照事务ID的顺序保存。</p>
+</li>
+<li>
+<p>Snapshooter会根据当前的ProgressTable上的记录，指导GraphNode创建snapshoot。如上图：在ProgressTable中IngestNode S1对应的事务ID为3，Sn为7，所有的IngestNode的事务ID就形成了一个全局的时间戳，利用这个时间戳在GraphNode上创建了snapshoot。</p>
+</li>
+</ul>
+<h2 id="4-图计算">4. 图计算</h2>
+<h2 id="41-功能">4.1 功能</h2>
+<ul>
+<li>支持pull、push模式（与gemini类似）</li>
+<li>支持BSP execution mode</li>
+<li>支持Global aggregate</li>
+</ul>
+<h2 id="42-如何支持增量计算">4.2 如何支持增量计算？</h2>
+<ul>
+<li>kineograph通过用户自定义规则去检查vertex status，和上一个snapshoot比较，计算出增量的vertex。</li>
+<li>对部分顶点，跑算法。（这里的部分顶点不仅仅是新增的顶点，也可能涉及到已经入库的旧顶点，根据用户自定义的规则而定）</li>
+</ul>
+<h2 id="5-容错">5. 容错</h2>
+<ul>
+<li>使用类似zookeeper和chubby这样的一致性服务维护数据。如：ProgressTable、图计算协调、机器监控、副本跟踪</li>
+<li>IngestNode：当IngestNode宕机后，使用新的Node替代，新Node的编号为Ci+1替代之前的Ci</li>
+<li>GraphNode：存储层采用quorum-based的副本机制容错。计算层采用主备机制容错。计算Node挂掉后，可以通过回滚-重新执行的方式容错。</li>
+<li>机器扩容：迁移物理partition到新机器上。</li>
+<li>数据过期：可以利用所有IngestNode上的事务ID形成一个全局的时间戳，作为过期的边界线。</li>
+</ul>
+<h2 id="6优点缺点">6.优点&amp;缺点</h2>
+<h3 id="61-优点">6.1 优点</h3>
+<ul>
+<li>将图计算和图数据的更新操作进行隔离，互不影响。</li>
+<li>快照：把所有IngestNode最新完成的事务ID串起来，形成了一个全局时间戳，利用该时间戳创建一个快照。</li>
+</ul>
+<h3 id="62-缺点">6.2 缺点</h3>
+<ul>
+<li>计算和存储在同一个Node上，如果存储量少&amp;计算量大的情况下，不能单独对计算扩容。</li>
+</ul>
+
+            </div>
+            
+              <div class="tag-container">
+                
+                  <a href="https://tong-hao.github.io/graph-computer/" class="tag">
+                    图计算
+                  </a>
+                
+                  <a href="https://tong-hao.github.io/paper/" class="tag">
+                    论文
+                  </a>
+                
+              </div>
+            
+            
+              <div class="next-post">
+                <div class="next">下一篇</div>
+                <a href="https://tong-hao.github.io/guan-yu-gao-ji-yu-yan-wei-shi-me-yao-bian-yi/">
+                  <h3 class="post-title">
+                    关于高级语言为什么要编译
+                  </h3>
+                </a>
+              </div>
+            
+
+            
+
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <script src="https://unpkg.com/aos@next/dist/aos.js"></script>
+<script type="application/javascript">
+
+AOS.init();
+
+var app = new Vue({
+  el: '#app',
+  data: {
+    menuVisible: false,
+  },
+})
+
+</script>
+
+
+  <script src="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.5.1/build/highlight.min.js"></script>
+  <script>
+    hljs.initHighlightingOnLoad()
+  </script>
+
+
+
+
+
+  </body>
+</html>

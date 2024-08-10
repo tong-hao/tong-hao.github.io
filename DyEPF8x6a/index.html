@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" >
+
+<title>doris-元数据 | Caton Blog</title>
+
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="shortcut icon" href="https://tong-hao.github.io/favicon.ico?v=1723274616057">
+<link rel="stylesheet" href="https://tong-hao.github.io/styles/main.css">
+
+
+
+<link rel="stylesheet" href="https://unpkg.com/aos@next/dist/aos.css" />
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+
+
+
+    <meta name="description" content="元数据目录
+
+
+doris的元数据采用的bdb(Berkeley DB)存储的，是kv存储
+bdb可以理解为元数据的元数据
+image目录才是doris的元数据信息
+
+image.xxx是元数据的镜像数据
+ROLE是角色数据
+VERSION..." />
+    <meta name="keywords" content="doris" />
+  </head>
+  <body>
+    <div id="app" class="main">
+
+      <div class="sidebar" :class="{ 'full-height': menuVisible }">
+  <div class="top-container" data-aos="fade-right">
+    <div class="top-header-container">
+      <a class="site-title-container" href="https://tong-hao.github.io">
+        <img src="https://tong-hao.github.io/images/avatar.png?v=1723274616057" class="site-logo">
+        <h1 class="site-title">Caton Blog</h1>
+      </a>
+      <div class="menu-btn" @click="menuVisible = !menuVisible">
+        <div class="line"></div>
+      </div>
+    </div>
+    <div>
+      
+        
+          <a href="/" class="site-nav">
+            首页
+          </a>
+        
+      
+        
+          <a href="/archives" class="site-nav">
+            归档
+          </a>
+        
+      
+        
+          <a href="/tags" class="site-nav">
+            标签
+          </a>
+        
+      
+        
+          <a href="/about" class="site-nav">
+            关于
+          </a>
+        
+      
+        
+          <a href="/doris" class="site-nav">
+            #doris
+          </a>
+        
+      
+        
+          <a href="/pg" class="site-nav">
+            #postgresql
+          </a>
+        
+      
+        
+          <a href="/db" class="site-nav">
+            #数据库内核
+          </a>
+        
+      
+        
+          <a href="/graph-computer/" class="site-nav">
+            #图计算
+          </a>
+        
+      
+        
+          <a href="/graph-db" class="site-nav">
+            #图数据库
+          </a>
+        
+      
+        
+          <a href="/creation" class="site-nav">
+            #个人作品
+          </a>
+        
+      
+    </div>
+  </div>
+  <div class="bottom-container" data-aos="flip-up" data-aos-offset="0">
+    <div class="social-container">
+      
+        
+          <a class="social-link" href="https://github.com/tong-hao" target="_blank">
+            <i class="fab fa-github"></i>
+          </a>
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    </div>
+    <div class="site-description">
+      ✍️一个专注于数据库的博客
+    </div>
+    <div class="site-footer">
+       | <a class="rss" href="https://tong-hao.github.io/atom.xml" target="_blank">RSS</a>
+    </div>
+  </div>
+</div>
+
+
+      <div class="main-container">
+        <div class="content-container" data-aos="fade-up">
+          <div class="post-detail">
+            <h2 class="post-title">doris-元数据</h2>
+            <div class="post-date">2024-07-19</div>
+            
+            <div class="post-content" v-pre>
+              <h2 id="元数据目录">元数据目录</h2>
+<figure data-type="image" tabindex="1"><img src="https://tong-hao.github.io/post-images/1721368047930.png" alt="" loading="lazy"></figure>
+<ul>
+<li>doris的元数据采用的bdb(Berkeley DB)存储的，是kv存储</li>
+<li>bdb可以理解为元数据的元数据</li>
+<li>image目录才是doris的元数据信息
+<ul>
+<li>image.xxx是元数据的镜像数据</li>
+<li>ROLE是角色数据</li>
+<li>VERSION存的是集群信息</li>
+</ul>
+</li>
+</ul>
+<h2 id="存储">存储</h2>
+<ul>
+<li>使用bdbje(Berkeley DB java editor)存放元数据</li>
+<li>怎么存放？
+<ul>
+<li>kv形式</li>
+<li>写元数据代码入口：<code>EditLog.logEdit</code></li>
+<li>回放日志代码入口：<code>Catalog.replayJournal</code></li>
+</ul>
+</li>
+<li>checkpoint
+<ul>
+<li>定期将日志形成一个image文件</li>
+<li>入口：<code>Checkpoint.runAfterCatalogReady</code></li>
+<li>逻辑
+<ul>
+<li>创建checkpoint日志位置</li>
+<li>写入新image文件</li>
+<li>将image ID 推送给其他FE节点（非master）</li>
+<li>删除旧的journal</li>
+<li>删除旧的image</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>image格式
+<ul>
+<li><img src="https://tong-hao.github.io/post-images/1721368061517.png" alt="" loading="lazy"></li>
+</ul>
+</li>
+</ul>
+<h2 id="数据同步">数据同步</h2>
+<ul>
+<li>非master的日志如何与master保持一致？
+<ul>
+<li>bdbje没有回掉机制，只能定期轮询的方式将master上的新增日志发送给follower</li>
+<li>代码入口：<code>Env.createReplayer</code></li>
+</ul>
+</li>
+<li>如何防止非master与master的失联？
+<ul>
+<li>master定期生成一个时间戳，写入catalog</li>
+<li>非master通过回放可以收到这个时间戳</li>
+<li>如果非master的这个时间戳与当前时间的差值大于配置中的值，则认为失联</li>
+<li>代码：<code>Config.meta_delay_toleration_second</code></li>
+</ul>
+</li>
+<li>master挂了之后，follower会成为新的master
+<ul>
+<li>这个是leader选举功能</li>
+<li>采用了bdbje自带的<code>StateChangeListener</code> 功能</li>
+<li>代码入口：<code>BDBStateChangeListener</code></li>
+</ul>
+</li>
+</ul>
+<h2 id="doris-元数据回放">doris-元数据回放</h2>
+<figure data-type="image" tabindex="3"><img src="https://tong-hao.github.io/post-images/1721368078777.png" alt="" loading="lazy"></figure>
+
+            </div>
+            
+              <div class="tag-container">
+                
+                  <a href="https://tong-hao.github.io/doris/" class="tag">
+                    doris
+                  </a>
+                
+              </div>
+            
+            
+              <div class="next-post">
+                <div class="next">下一篇</div>
+                <a href="https://tong-hao.github.io/gk7KfAOV2/">
+                  <h3 class="post-title">
+                    doris-数据的读取
+                  </h3>
+                </a>
+              </div>
+            
+
+            
+
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <script src="https://unpkg.com/aos@next/dist/aos.js"></script>
+<script type="application/javascript">
+
+AOS.init();
+
+var app = new Vue({
+  el: '#app',
+  data: {
+    menuVisible: false,
+  },
+})
+
+</script>
+
+
+  <script src="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.5.1/build/highlight.min.js"></script>
+  <script>
+    hljs.initHighlightingOnLoad()
+  </script>
+
+
+
+
+
+  </body>
+</html>

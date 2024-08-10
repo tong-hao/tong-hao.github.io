@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" >
+
+<title>WAL | Caton Blog</title>
+
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="shortcut icon" href="https://tong-hao.github.io/favicon.ico?v=1723274616057">
+<link rel="stylesheet" href="https://tong-hao.github.io/styles/main.css">
+
+
+
+<link rel="stylesheet" href="https://unpkg.com/aos@next/dist/aos.css" />
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+
+
+
+    <meta name="description" content="WAL（Write-Ahead Log）是什么？
+WAL（Write-Ahead Log）是一种数据库技术，用于确保数据的持久性和一致性。它是一种日志机制，记录了数据库中的所有修改操作，包括插入、更新和删除。WAL将这些修改操作以顺序方式写..." />
+    <meta name="keywords" content="数据库" />
+  </head>
+  <body>
+    <div id="app" class="main">
+
+      <div class="sidebar" :class="{ 'full-height': menuVisible }">
+  <div class="top-container" data-aos="fade-right">
+    <div class="top-header-container">
+      <a class="site-title-container" href="https://tong-hao.github.io">
+        <img src="https://tong-hao.github.io/images/avatar.png?v=1723274616057" class="site-logo">
+        <h1 class="site-title">Caton Blog</h1>
+      </a>
+      <div class="menu-btn" @click="menuVisible = !menuVisible">
+        <div class="line"></div>
+      </div>
+    </div>
+    <div>
+      
+        
+          <a href="/" class="site-nav">
+            首页
+          </a>
+        
+      
+        
+          <a href="/archives" class="site-nav">
+            归档
+          </a>
+        
+      
+        
+          <a href="/tags" class="site-nav">
+            标签
+          </a>
+        
+      
+        
+          <a href="/about" class="site-nav">
+            关于
+          </a>
+        
+      
+        
+          <a href="/doris" class="site-nav">
+            #doris
+          </a>
+        
+      
+        
+          <a href="/pg" class="site-nav">
+            #postgresql
+          </a>
+        
+      
+        
+          <a href="/db" class="site-nav">
+            #数据库内核
+          </a>
+        
+      
+        
+          <a href="/graph-computer/" class="site-nav">
+            #图计算
+          </a>
+        
+      
+        
+          <a href="/graph-db" class="site-nav">
+            #图数据库
+          </a>
+        
+      
+        
+          <a href="/creation" class="site-nav">
+            #个人作品
+          </a>
+        
+      
+    </div>
+  </div>
+  <div class="bottom-container" data-aos="flip-up" data-aos-offset="0">
+    <div class="social-container">
+      
+        
+          <a class="social-link" href="https://github.com/tong-hao" target="_blank">
+            <i class="fab fa-github"></i>
+          </a>
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    </div>
+    <div class="site-description">
+      ✍️一个专注于数据库的博客
+    </div>
+    <div class="site-footer">
+       | <a class="rss" href="https://tong-hao.github.io/atom.xml" target="_blank">RSS</a>
+    </div>
+  </div>
+</div>
+
+
+      <div class="main-container">
+        <div class="content-container" data-aos="fade-up">
+          <div class="post-detail">
+            <h2 class="post-title">WAL</h2>
+            <div class="post-date">2024-06-01</div>
+            
+            <div class="post-content" v-pre>
+              <p><strong>WAL（Write-Ahead Log）是什么？</strong></p>
+<p>WAL（Write-Ahead Log）是一种数据库技术，用于确保数据的持久性和一致性。它<mark>是一种日志机制，记录了数据库中的所有修改操作</mark>，包括插入、更新和删除。WAL将这些修改操作以顺序方式写入日志文件，然后再将其应用到数据库文件中。</p>
+<p><strong>WAL解决了什么问题？</strong><br>
+WAL解决了数据库系统中的持久性和并发控制问题。</p>
+<ol>
+<li>
+<p><strong>持久性</strong>：WAL确保了数据的持久性，即使在数据库系统崩溃或断电的情况下。通过将修改操作写入日志文件，而不是直接写入数据库文件，WAL提供了一种可靠的方式来恢复数据库到崩溃前的状态。在系统恢复时，可以使用WAL日志文件中的信息来重新应用未完成的事务和恢复已提交的事务，从而保持数据的一致性和完整性。</p>
+</li>
+<li>
+<p><strong>并发控制</strong>：WAL还解决了并发访问数据库时的一致性问题。通过将修改操作记录在WAL日志中，数据库系统可以在并发事务执行期间保持数据的一致性。WAL使用了多版本并发控制（MVCC）机制，每个事务在读取数据时使用自己的一致性视图，而不会受到其他并发事务的影响。这样可以避免读取到未提交的数据或读取到已修改的数据，确保事务的隔离性和一致性。</p>
+</li>
+</ol>
+<p>总之，WAL是一种用于确保数据库持久性和并发控制的日志机制。它通过将修改操作记录在日志文件中，提供了一种可靠的方式来恢复数据库并保持数据的一致性。同时，WAL还通过使用MVCC机制来解决并发访问时的一致性问题。</p>
+<p>WAL（Write-Ahead Logging）是关系数据库系统中用于提供原子性和持久性（ACID属性中的两个）的一系列技术。在WAL中，<mark>所有的修改在提交之前都要先写入日志文件中</mark>，包括redo和undo信息。这样做可以保证数据的安全性。<mark>具体的工作机制是：先在内存中提交事务，然后写日志（Redo Log），然后再后台任务中把内存中的数据异步刷到磁盘。</mark></p>
+
+            </div>
+            
+              <div class="tag-container">
+                
+                  <a href="https://tong-hao.github.io/db/" class="tag">
+                    数据库
+                  </a>
+                
+              </div>
+            
+            
+              <div class="next-post">
+                <div class="next">下一篇</div>
+                <a href="https://tong-hao.github.io/pGnz95I21/">
+                  <h3 class="post-title">
+                    tidb
+                  </h3>
+                </a>
+              </div>
+            
+
+            
+
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <script src="https://unpkg.com/aos@next/dist/aos.js"></script>
+<script type="application/javascript">
+
+AOS.init();
+
+var app = new Vue({
+  el: '#app',
+  data: {
+    menuVisible: false,
+  },
+})
+
+</script>
+
+
+  <script src="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.5.1/build/highlight.min.js"></script>
+  <script>
+    hljs.initHighlightingOnLoad()
+  </script>
+
+
+
+
+
+  </body>
+</html>

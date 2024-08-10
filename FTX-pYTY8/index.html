@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" >
+
+<title>pg-可见性检查规则 | Caton Blog</title>
+
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="shortcut icon" href="https://tong-hao.github.io/favicon.ico?v=1723274616057">
+<link rel="stylesheet" href="https://tong-hao.github.io/styles/main.css">
+
+
+
+<link rel="stylesheet" href="https://unpkg.com/aos@next/dist/aos.css" />
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+
+
+
+    <meta name="description" content="名词解释
+
+t_xmin 是执行插入时的事务ID
+Status(t_xmin) 是插入时的事务的状态
+t_xmax 是执行删除时的事务ID
+Status(t_xmax) 是删除时的事务的状态
+
+规则
+Rule 1:  If Status(t..." />
+    <meta name="keywords" content="postgresql" />
+  </head>
+  <body>
+    <div id="app" class="main">
+
+      <div class="sidebar" :class="{ 'full-height': menuVisible }">
+  <div class="top-container" data-aos="fade-right">
+    <div class="top-header-container">
+      <a class="site-title-container" href="https://tong-hao.github.io">
+        <img src="https://tong-hao.github.io/images/avatar.png?v=1723274616057" class="site-logo">
+        <h1 class="site-title">Caton Blog</h1>
+      </a>
+      <div class="menu-btn" @click="menuVisible = !menuVisible">
+        <div class="line"></div>
+      </div>
+    </div>
+    <div>
+      
+        
+          <a href="/" class="site-nav">
+            首页
+          </a>
+        
+      
+        
+          <a href="/archives" class="site-nav">
+            归档
+          </a>
+        
+      
+        
+          <a href="/tags" class="site-nav">
+            标签
+          </a>
+        
+      
+        
+          <a href="/about" class="site-nav">
+            关于
+          </a>
+        
+      
+        
+          <a href="/doris" class="site-nav">
+            #doris
+          </a>
+        
+      
+        
+          <a href="/pg" class="site-nav">
+            #postgresql
+          </a>
+        
+      
+        
+          <a href="/db" class="site-nav">
+            #数据库内核
+          </a>
+        
+      
+        
+          <a href="/graph-computer/" class="site-nav">
+            #图计算
+          </a>
+        
+      
+        
+          <a href="/graph-db" class="site-nav">
+            #图数据库
+          </a>
+        
+      
+        
+          <a href="/creation" class="site-nav">
+            #个人作品
+          </a>
+        
+      
+    </div>
+  </div>
+  <div class="bottom-container" data-aos="flip-up" data-aos-offset="0">
+    <div class="social-container">
+      
+        
+          <a class="social-link" href="https://github.com/tong-hao" target="_blank">
+            <i class="fab fa-github"></i>
+          </a>
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    </div>
+    <div class="site-description">
+      ✍️一个专注于数据库的博客
+    </div>
+    <div class="site-footer">
+       | <a class="rss" href="https://tong-hao.github.io/atom.xml" target="_blank">RSS</a>
+    </div>
+  </div>
+</div>
+
+
+      <div class="main-container">
+        <div class="content-container" data-aos="fade-up">
+          <div class="post-detail">
+            <h2 class="post-title">pg-可见性检查规则</h2>
+            <div class="post-date">2024-06-03</div>
+            
+            <div class="post-content" v-pre>
+              <h2 id="名词解释">名词解释</h2>
+<ul>
+<li>t_xmin 是执行插入时的事务ID</li>
+<li>Status(t_xmin) 是插入时的事务的状态</li>
+<li>t_xmax 是执行删除时的事务ID</li>
+<li>Status(t_xmax) 是删除时的事务的状态</li>
+</ul>
+<h2 id="规则">规则</h2>
+<p><strong>Rule 1:</strong>  If <code>Status(t_xmin) = ABORTED</code>  =&gt; Invisible<br>
+<strong>解释：</strong> 在执行插入记录的时候事务被撤消了，所以该记录是不可见。</p>
+<p><strong>Rule 2:</strong> If <code>Status(t_xmin) = IN_PROGRESS</code>  AND<code> t_xmin = current_txid</code>  AND <code>t_xmax = INVAILD</code> =&gt; Visible<br>
+<strong>解释：</strong> 如果当前事务正在执行插入，并且没有执行过删除，该条记录对于当前事务时可见的。</p>
+<p><strong>Rule 3:</strong> If <code>Status(t_xmin) = IN_PROGRESS</code>  AND<code> t_xmin = current_txid</code>  AND <code>t_xmax != INVAILD</code> =&gt; Invisible<br>
+<strong>解释：</strong> 如果当前事务正在执行插入，并且执行过删除，该条记录在当前事务中是不可见。</p>
+<p><strong>Rule 4:</strong> If <code>Status(t_xmin) = IN_PROGRESS</code>  AND<code> t_xmin != current_txid</code>  =&gt; Invisible<br>
+<strong>解释：</strong> 事务A正在执行插入，事务B是看不到这条记录的。</p>
+<p><strong>Rule 5:</strong> If <code>Status(t_xmin) = COMMITTED</code>  AND <code>Snapshot(t_xmin) = active</code>  =&gt; Invisible<br>
+<strong>解释：</strong> 插入改记录的事务已经被commit，但是该记录的事务是活跃状态，所以不可见。</p>
+<p><strong>Rule 6:</strong> If <code>Status(t_xmin) = COMMITTED</code>  AND （<code>t_xmax = INVALID</code> OR <code>Status(t_xmax) = ABORTED</code>)  =&gt; Visible<br>
+<strong>解释：</strong> 插入改记录的事务已经被commit了，并且改记录没有删除过，或者记录对应的事务被回滚了，所以是可见的。</p>
+<p><strong>Rule 7:</strong> If <code>Status(t_xmin) = COMMITTED</code>  AND <code>Status(t_xmax) = IN_PROGRESS</code>  AND <code>t_xmax = current_txid</code>  =&gt; Invisible<br>
+<strong>解释：</strong> 插入改记录的事务已经被commit了，但是该记录正在被删除，并且删除的事务和当前是同一个事务，所以不可见。</p>
+<p><strong>Rule 8:</strong> If <code>Status(t_xmin) = COMMITTED</code>  AND <code>Status(t_xmax) = IN_PROGRESS</code>  AND <code>t_xmax != current_txid</code>  =&gt; Visible<br>
+<strong>解释：</strong> 插入改记录的事务已经被commit了，但是该记录正在被删除，并且删除的事务不是当前是同一个事务，所以可见。</p>
+<p><strong>Rule 9:</strong> If <code>Status(t_xmin) = COMMITTED</code>  AND <code>Status(t_xmax) = COMMITTED</code>  AND <code>Snapshot(t_xmax) = active</code>  =&gt; Visible<br>
+<strong>解释：</strong> 插入改记录的事务已经被commit了，删除该记录的事务也commit了，并且当前事务的snapshot显示删除该记录的事务是活跃的，所以可见。</p>
+<p><strong>Rule 10:</strong> If <code>Status(t_xmin) = COMMITTED</code>  AND <code>Status(t_xmax) = COMMITTED</code>  AND <code>Snapshot(t_xmax) != active</code>  =&gt; Invisible<br>
+<strong>解释：</strong> 插入改记录的事务已经被commit了，删除该记录的事务也commit了，并且当前事务的snapshot显示删除该记录的事务是非活跃的，所以不可见。</p>
+
+            </div>
+            
+              <div class="tag-container">
+                
+                  <a href="https://tong-hao.github.io/pg/" class="tag">
+                    postgresql
+                  </a>
+                
+              </div>
+            
+            
+              <div class="next-post">
+                <div class="next">下一篇</div>
+                <a href="https://tong-hao.github.io/sJaPMLeBJ/">
+                  <h3 class="post-title">
+                    pg中的Index-Only Scan
+                  </h3>
+                </a>
+              </div>
+            
+
+            
+
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <script src="https://unpkg.com/aos@next/dist/aos.js"></script>
+<script type="application/javascript">
+
+AOS.init();
+
+var app = new Vue({
+  el: '#app',
+  data: {
+    menuVisible: false,
+  },
+})
+
+</script>
+
+
+  <script src="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.5.1/build/highlight.min.js"></script>
+  <script>
+    hljs.initHighlightingOnLoad()
+  </script>
+
+
+
+
+
+  </body>
+</html>
