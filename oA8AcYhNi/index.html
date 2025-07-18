@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" >
+
+<title>pg学习资料 | Caton Blog</title>
+
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="shortcut icon" href="https://tong-hao.github.io/favicon.ico?v=1752831806033">
+<link rel="stylesheet" href="https://tong-hao.github.io/styles/main.css">
+
+
+  
+    <link rel="stylesheet" href="https://unpkg.com/gitalk/dist/gitalk.css" />
+  
+
+  
+
+
+<link rel="stylesheet" href="https://unpkg.com/aos@next/dist/aos.css" />
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+
+
+
+    <meta name="description" content="pg的使用
+PostgreSQL 教程 | 菜鸟教程
+PostgreSQL 12.2 手册
+PostgreSQL Tutorial Full Course 2022 - YouTube
+《由浅入深PostgreSQL》
+《PostgreSQ..." />
+    <meta name="keywords" content="postgresql" />
+  </head>
+  <body>
+    <div id="app" class="main">
+
+      <div class="sidebar" :class="{ 'full-height': menuVisible }">
+  <div class="top-container" data-aos="fade-right">
+    <div class="top-header-container">
+      <a class="site-title-container" href="https://tong-hao.github.io">
+        <img src="https://tong-hao.github.io/images/avatar.png?v=1752831806033" class="site-logo">
+        <h1 class="site-title">Caton Blog</h1>
+      </a>
+      <div class="menu-btn" @click="menuVisible = !menuVisible">
+        <div class="line"></div>
+      </div>
+    </div>
+    <div>
+      
+        
+          <a href="/" class="site-nav">
+            首页
+          </a>
+        
+      
+        
+          <a href="/archives" class="site-nav">
+            归档
+          </a>
+        
+      
+        
+          <a href="/tags" class="site-nav">
+            标签
+          </a>
+        
+      
+        
+          <a href="/about" class="site-nav">
+            关于
+          </a>
+        
+      
+        
+          <a href="/doris" class="site-nav">
+            #doris
+          </a>
+        
+      
+        
+          <a href="/pg" class="site-nav">
+            #postgresql
+          </a>
+        
+      
+        
+          <a href="/db" class="site-nav">
+            #数据库内核
+          </a>
+        
+      
+        
+          <a href="/graph-computer/" class="site-nav">
+            #图计算
+          </a>
+        
+      
+        
+          <a href="/graph-db" class="site-nav">
+            #图数据库
+          </a>
+        
+      
+        
+          <a href="/creation" class="site-nav">
+            #个人作品
+          </a>
+        
+      
+    </div>
+  </div>
+  <div class="bottom-container" data-aos="flip-up" data-aos-offset="0">
+    <div class="social-container">
+      
+        
+          <a class="social-link" href="https://github.com/tong-hao" target="_blank">
+            <i class="fab fa-github"></i>
+          </a>
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    </div>
+    <div class="site-description">
+      ✍️一个专注于数据库的博客
+    </div>
+    <div class="site-footer">
+       | <a class="rss" href="https://tong-hao.github.io/atom.xml" target="_blank">RSS</a>
+    </div>
+  </div>
+</div>
+
+
+      <div class="main-container">
+        <div class="content-container" data-aos="fade-up">
+          <div class="post-detail">
+            <h2 class="post-title">pg学习资料</h2>
+            <div class="post-date">2024-06-01</div>
+            
+            <div class="post-content" v-pre>
+              <h2 id="pg的使用">pg的使用</h2>
+<p><a href="https://www.runoob.com/postgresql/postgresql-tutorial.html">PostgreSQL 教程 | 菜鸟教程</a><br>
+<a href="http://www.postgres.cn/docs/12/">PostgreSQL 12.2 手册</a><br>
+<a href="https://www.youtube.com/watch?v=85pG_pDkITY">PostgreSQL Tutorial Full Course 2022 - YouTube</a><br>
+《由浅入深PostgreSQL》<br>
+《PostgreSQL实战》7.6<br>
+《PostgreSQL修炼之道：从小工到专家》8.4<br>
+《PostgreSQL 9X之巅》</p>
+<h3 id="内核">内核</h3>
+<ul>
+<li>PostgreSQL数据库内核分析</li>
+<li><a href="https://postgrespro.com/community/books/internals">PostgreSQL 14 Internals</a></li>
+<li><a href="https://www.interdb.jp/pg/">The Internals of PostgreSQL</a></li>
+<li>Mastering PostgreSQL 11</li>
+<li>《大型共享数据库的数据关系模型》</li>
+<li>《Architecture of a Database System》</li>
+<li>《数据库系统实现》</li>
+<li>《PostgreSQL查询引擎源码技术探析》</li>
+<li>《数据库查询优化器的艺术》</li>
+<li>《数据库事务的艺术》</li>
+</ul>
+<h2 id="大牛博客">大牛博客</h2>
+<p><a href="http://www.pengyuwei.net/zh/">彭煜玮的主页</a><br>
+<a href="https://github.com/digoal/blog/blob/master/README.md">德哥的博客</a></p>
+<h2 id="其他资料">其他资料</h2>
+<p><a href="http://www.postgres.cn/v2/home">PostgreSQL中文社区:: 世界上功能最强大的开源数据库...</a><br>
+<a href="http://www.pgsql.tech/">PostgreSQL 技术之家</a><br>
+<a href="https://github.com/digoal/blog/blob/master/202405/20240509_02.md">摸到门路了! 如何学好PostgreSQL或基于它的国产开源数据库</a></p>
+
+            </div>
+            
+              <div class="tag-container">
+                
+                  <a href="https://tong-hao.github.io/pg/" class="tag">
+                    postgresql
+                  </a>
+                
+              </div>
+            
+            
+              <div class="next-post">
+                <div class="next">下一篇</div>
+                <a href="https://tong-hao.github.io/YKYN0S5QY/">
+                  <h3 class="post-title">
+                    一致性协议 paxos
+                  </h3>
+                </a>
+              </div>
+            
+
+            
+              
+                <div id="gitalk-container" data-aos="fade-in"></div>
+              
+
+              
+            
+
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <script src="https://unpkg.com/aos@next/dist/aos.js"></script>
+<script type="application/javascript">
+
+AOS.init();
+
+var app = new Vue({
+  el: '#app',
+  data: {
+    menuVisible: false,
+  },
+})
+
+</script>
+
+
+  <script src="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.5.1/build/highlight.min.js"></script>
+  <script>
+    hljs.initHighlightingOnLoad()
+  </script>
+
+
+
+
+  
+    <script src="https://unpkg.com/gitalk/dist/gitalk.min.js"></script>
+    <script>
+
+      var gitalk = new Gitalk({
+        clientID: 'Iv23lit3WMjXHUkoxS5B',
+        clientSecret: '2654edec437559b9b027d9699017207fdb229659',
+        repo: 'tong-hao.github.io',
+        owner: 'tong-hao',
+        admin: ['tong-hao'],
+        id: (location.pathname).substring(0, 49),      // Ensure uniqueness and length less than 50
+        distractionFreeMode: false  // Facebook-like distraction free mode
+      })
+
+      gitalk.render('gitalk-container')
+
+    </script>
+  
+
+  
+
+
+
+
+  </body>
+</html>

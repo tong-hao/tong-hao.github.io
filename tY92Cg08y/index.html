@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" >
+
+<title>pg-什么是WAL | Caton Blog</title>
+
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="shortcut icon" href="https://tong-hao.github.io/favicon.ico?v=1752831806033">
+<link rel="stylesheet" href="https://tong-hao.github.io/styles/main.css">
+
+
+  
+    <link rel="stylesheet" href="https://unpkg.com/gitalk/dist/gitalk.css" />
+  
+
+  
+
+
+<link rel="stylesheet" href="https://unpkg.com/aos@next/dist/aos.css" />
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+
+
+
+    <meta name="description" content="
+WAL 全称是 Write-Ahead Logging，预写日志
+写WAL的目的：当数据库发生崩溃时，可以根据WAL数据将系统恢复到一致的状态。
+WAL是pg在7.1版本加入的功能
+
+不写WAL的例子
+
+
+当执行第一个insert时，先将..." />
+    <meta name="keywords" content="postgresql" />
+  </head>
+  <body>
+    <div id="app" class="main">
+
+      <div class="sidebar" :class="{ 'full-height': menuVisible }">
+  <div class="top-container" data-aos="fade-right">
+    <div class="top-header-container">
+      <a class="site-title-container" href="https://tong-hao.github.io">
+        <img src="https://tong-hao.github.io/images/avatar.png?v=1752831806033" class="site-logo">
+        <h1 class="site-title">Caton Blog</h1>
+      </a>
+      <div class="menu-btn" @click="menuVisible = !menuVisible">
+        <div class="line"></div>
+      </div>
+    </div>
+    <div>
+      
+        
+          <a href="/" class="site-nav">
+            首页
+          </a>
+        
+      
+        
+          <a href="/archives" class="site-nav">
+            归档
+          </a>
+        
+      
+        
+          <a href="/tags" class="site-nav">
+            标签
+          </a>
+        
+      
+        
+          <a href="/about" class="site-nav">
+            关于
+          </a>
+        
+      
+        
+          <a href="/doris" class="site-nav">
+            #doris
+          </a>
+        
+      
+        
+          <a href="/pg" class="site-nav">
+            #postgresql
+          </a>
+        
+      
+        
+          <a href="/db" class="site-nav">
+            #数据库内核
+          </a>
+        
+      
+        
+          <a href="/graph-computer/" class="site-nav">
+            #图计算
+          </a>
+        
+      
+        
+          <a href="/graph-db" class="site-nav">
+            #图数据库
+          </a>
+        
+      
+        
+          <a href="/creation" class="site-nav">
+            #个人作品
+          </a>
+        
+      
+    </div>
+  </div>
+  <div class="bottom-container" data-aos="flip-up" data-aos-offset="0">
+    <div class="social-container">
+      
+        
+          <a class="social-link" href="https://github.com/tong-hao" target="_blank">
+            <i class="fab fa-github"></i>
+          </a>
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    </div>
+    <div class="site-description">
+      ✍️一个专注于数据库的博客
+    </div>
+    <div class="site-footer">
+       | <a class="rss" href="https://tong-hao.github.io/atom.xml" target="_blank">RSS</a>
+    </div>
+  </div>
+</div>
+
+
+      <div class="main-container">
+        <div class="content-container" data-aos="fade-up">
+          <div class="post-detail">
+            <h2 class="post-title">pg-什么是WAL</h2>
+            <div class="post-date">2024-06-11</div>
+            
+            <div class="post-content" v-pre>
+              <ul>
+<li>WAL 全称是 Write-Ahead Logging，预写日志</li>
+<li>写WAL的目的：当数据库发生崩溃时，可以根据WAL数据将系统恢复到一致的状态。</li>
+<li>WAL是pg在7.1版本加入的功能</li>
+</ul>
+<h2 id="不写wal的例子">不写WAL的例子</h2>
+<figure data-type="image" tabindex="1"><img src="https://tong-hao.github.io/post-images/1718074885257.png" alt="" loading="lazy"></figure>
+<ul>
+<li>当执行第一个insert时，先将表A的数据从表文件加载到buffer pool中，然后插入到buffer pool中的一个合适的页里</li>
+<li>当执行第二条insert时，还是直接插入到buffer pool中</li>
+<li>当机器停电的时候，我们插入的两条记录就会丢失。因为它并没有保存到磁盘里。</li>
+</ul>
+<h2 id="checkpoint">checkpoint</h2>
+<ul>
+<li>数据恢复需要从某个位置恢复到当前的状态。这个位置就是checkpoint记录。</li>
+<li>有个checkpointer进程，它会定期地在WAL中写一个checkpoint记录，当恢复的时候就从最近的一次位置恢复。</li>
+</ul>
+<h2 id="wal的写入过程">WAL的写入过程</h2>
+<p>pg会将我们的操作记录到一个文件中，在pg中，这个文件是xlog。当系统崩溃的时候，可以从xlog中恢复之前操作记录。这里的操作包括：insert，delete，commit。当事务commit/abort的时候会立即写入到xlog中。</p>
+<p>下面是一个例子：<br>
+<img src="https://tong-hao.github.io/post-images/1718074865585.png" alt="" loading="lazy"></p>
+<ol>
+<li>checkpointer进程在xlog文件中写了一条checkpoint记录</li>
+<li>执行insert语句时，pg会先从表文件中将page加载到buffer pool中，然后在buffer pool的某个page中插入一条记录，再在WAL buffer中写入一条xlog记录</li>
+<li>当执行<code>commit</code>的时候，pg会将commit操作写入到WAL buffer中，然后将WAL buffer中的所有xlog记录写到WAL文件中。</li>
+<li>再次执行insert语句，如同2</li>
+<li>再次执行commit语句，如同3</li>
+<li>当系统crash时，所有的insert都已经保存到了wal文件里</li>
+</ol>
+<h2 id="数据恢复过程">数据恢复过程</h2>
+<figure data-type="image" tabindex="2"><img src="https://tong-hao.github.io/post-images/1718074851230.png" alt="" loading="lazy"></figure>
+<ol>
+<li>从表文件中将page加载到buffer pool里。</li>
+<li>从WAL文件中读取xlog记录，并与表文件page中的LSN做做比较。
+<ul>
+<li>如果xlog的LSN大，则将它插入到buffer pool的page中</li>
+<li>如果xlog的LSN小，则不做任何事情</li>
+</ul>
+</li>
+<li>重复步骤2。<br>
+上面这个过程叫日志回放。</li>
+</ol>
+<p>注意：<br>
+pg只支持redo log，不支持undo log。</p>
+
+            </div>
+            
+              <div class="tag-container">
+                
+                  <a href="https://tong-hao.github.io/pg/" class="tag">
+                    postgresql
+                  </a>
+                
+              </div>
+            
+            
+              <div class="next-post">
+                <div class="next">下一篇</div>
+                <a href="https://tong-hao.github.io/UVxOVIu1P/">
+                  <h3 class="post-title">
+                    pg-刷脏
+                  </h3>
+                </a>
+              </div>
+            
+
+            
+              
+                <div id="gitalk-container" data-aos="fade-in"></div>
+              
+
+              
+            
+
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <script src="https://unpkg.com/aos@next/dist/aos.js"></script>
+<script type="application/javascript">
+
+AOS.init();
+
+var app = new Vue({
+  el: '#app',
+  data: {
+    menuVisible: false,
+  },
+})
+
+</script>
+
+
+  <script src="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.5.1/build/highlight.min.js"></script>
+  <script>
+    hljs.initHighlightingOnLoad()
+  </script>
+
+
+
+
+  
+    <script src="https://unpkg.com/gitalk/dist/gitalk.min.js"></script>
+    <script>
+
+      var gitalk = new Gitalk({
+        clientID: 'Iv23lit3WMjXHUkoxS5B',
+        clientSecret: '2654edec437559b9b027d9699017207fdb229659',
+        repo: 'tong-hao.github.io',
+        owner: 'tong-hao',
+        admin: ['tong-hao'],
+        id: (location.pathname).substring(0, 49),      // Ensure uniqueness and length less than 50
+        distractionFreeMode: false  // Facebook-like distraction free mode
+      })
+
+      gitalk.render('gitalk-container')
+
+    </script>
+  
+
+  
+
+
+
+
+  </body>
+</html>

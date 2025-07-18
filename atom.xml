@@ -1,0 +1,406 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+    <id>https://tong-hao.github.io</id>
+    <title>Caton Blog</title>
+    <updated>2025-07-18T09:43:28.549Z</updated>
+    <generator>https://github.com/jpmonette/feed</generator>
+    <link rel="alternate" href="https://tong-hao.github.io"/>
+    <link rel="self" href="https://tong-hao.github.io/atom.xml"/>
+    <subtitle>✍️一个专注于数据库的博客</subtitle>
+    <logo>https://tong-hao.github.io/images/avatar.png</logo>
+    <icon>https://tong-hao.github.io/favicon.ico</icon>
+    <rights>All rights reserved 2025, Caton Blog</rights>
+    <entry>
+        <title type="html"><![CDATA[b+ tree 实现 by c++ ]]></title>
+        <id>https://tong-hao.github.io/w5bkbSttTh/</id>
+        <link href="https://tong-hao.github.io/w5bkbSttTh/">
+        </link>
+        <updated>2025-06-10T12:02:57.000Z</updated>
+        <content type="html"><![CDATA[<p>利用空闲时间用c++实现了一套B+树的实现。<br>
+详细代码见：https://github.com/tong-hao/b_plus_tree</p>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[repo-rocksdb_example]]></title>
+        <id>https://tong-hao.github.io/1dQLa0W0E/</id>
+        <link href="https://tong-hao.github.io/1dQLa0W0E/">
+        </link>
+        <updated>2024-08-10T07:11:46.000Z</updated>
+        <content type="html"><![CDATA[<p>该repo包含了rocksdb的常用操作例子。</p>
+<p><strong>地址：</strong><br>
+<a href="https://github.com/tong-hao/my_rocksdb_example">https://github.com/tong-hao/my_rocksdb_example</a></p>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[repo-sort_algorithm]]></title>
+        <id>https://tong-hao.github.io/YBVoLy7um/</id>
+        <link href="https://tong-hao.github.io/YBVoLy7um/">
+        </link>
+        <updated>2024-08-10T07:09:21.000Z</updated>
+        <content type="html"><![CDATA[<p><strong>本repo是用c++实现的10种排序算法，主要包含：</strong></p>
+<ul>
+<li>冒泡排序</li>
+<li>选择排序</li>
+<li>插入排序</li>
+<li>归并排序</li>
+<li>堆排序</li>
+<li>快速排序</li>
+<li>希尔排序</li>
+<li>计数排序</li>
+<li>桶排序</li>
+<li>基数排序</li>
+</ul>
+<p><strong>地址：</strong><br>
+<a href="https://github.com/tong-hao/sort_algorithm">https://github.com/tong-hao/sort_algorithm</a></p>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[作品-ibook笔记导出]]></title>
+        <id>https://tong-hao.github.io/nnFfgCX7q/</id>
+        <link href="https://tong-hao.github.io/nnFfgCX7q/">
+        </link>
+        <updated>2024-08-10T07:04:05.000Z</updated>
+        <content type="html"><![CDATA[<p>ibook notes tool 是一个ibook笔记导出工具，基于Qt6实现的。</p>
+<p><strong>界面：</strong><br>
+<img src="https://tong-hao.github.io/post-images/1723273555859.png" alt="" loading="lazy"></p>
+<p><strong>源码：</strong><br>
+<a href="https://github.com/tong-hao/Qt_ibook_tool">https://github.com/tong-hao/Qt_ibook_tool</a></p>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[doris-元数据]]></title>
+        <id>https://tong-hao.github.io/DyEPF8x6a/</id>
+        <link href="https://tong-hao.github.io/DyEPF8x6a/">
+        </link>
+        <updated>2024-07-19T05:47:00.000Z</updated>
+        <content type="html"><![CDATA[<h2 id="元数据目录">元数据目录</h2>
+<figure data-type="image" tabindex="1"><img src="https://tong-hao.github.io/post-images/1721368047930.png" alt="" loading="lazy"></figure>
+<ul>
+<li>doris的元数据采用的bdb(Berkeley DB)存储的，是kv存储</li>
+<li>bdb可以理解为元数据的元数据</li>
+<li>image目录才是doris的元数据信息
+<ul>
+<li>image.xxx是元数据的镜像数据</li>
+<li>ROLE是角色数据</li>
+<li>VERSION存的是集群信息</li>
+</ul>
+</li>
+</ul>
+<h2 id="存储">存储</h2>
+<ul>
+<li>使用bdbje(Berkeley DB java editor)存放元数据</li>
+<li>怎么存放？
+<ul>
+<li>kv形式</li>
+<li>写元数据代码入口：<code>EditLog.logEdit</code></li>
+<li>回放日志代码入口：<code>Catalog.replayJournal</code></li>
+</ul>
+</li>
+<li>checkpoint
+<ul>
+<li>定期将日志形成一个image文件</li>
+<li>入口：<code>Checkpoint.runAfterCatalogReady</code></li>
+<li>逻辑
+<ul>
+<li>创建checkpoint日志位置</li>
+<li>写入新image文件</li>
+<li>将image ID 推送给其他FE节点（非master）</li>
+<li>删除旧的journal</li>
+<li>删除旧的image</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>image格式
+<ul>
+<li><img src="https://tong-hao.github.io/post-images/1721368061517.png" alt="" loading="lazy"></li>
+</ul>
+</li>
+</ul>
+<h2 id="数据同步">数据同步</h2>
+<ul>
+<li>非master的日志如何与master保持一致？
+<ul>
+<li>bdbje没有回掉机制，只能定期轮询的方式将master上的新增日志发送给follower</li>
+<li>代码入口：<code>Env.createReplayer</code></li>
+</ul>
+</li>
+<li>如何防止非master与master的失联？
+<ul>
+<li>master定期生成一个时间戳，写入catalog</li>
+<li>非master通过回放可以收到这个时间戳</li>
+<li>如果非master的这个时间戳与当前时间的差值大于配置中的值，则认为失联</li>
+<li>代码：<code>Config.meta_delay_toleration_second</code></li>
+</ul>
+</li>
+<li>master挂了之后，follower会成为新的master
+<ul>
+<li>这个是leader选举功能</li>
+<li>采用了bdbje自带的<code>StateChangeListener</code> 功能</li>
+<li>代码入口：<code>BDBStateChangeListener</code></li>
+</ul>
+</li>
+</ul>
+<h2 id="doris-元数据回放">doris-元数据回放</h2>
+<figure data-type="image" tabindex="3"><img src="https://tong-hao.github.io/post-images/1721368078777.png" alt="" loading="lazy"></figure>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[doris-数据的读取]]></title>
+        <id>https://tong-hao.github.io/gk7KfAOV2/</id>
+        <link href="https://tong-hao.github.io/gk7KfAOV2/">
+        </link>
+        <updated>2024-07-19T05:45:25.000Z</updated>
+        <content type="html"><![CDATA[<ul>
+<li>基础概念
+<ul>
+<li>Tablet 分桶</li>
+<li>Rowset 版本数据</li>
+<li>Segment 是文件系统中的一个文件，256M，会拆成多个page</li>
+<li>Page 是一个逻辑概念</li>
+</ul>
+</li>
+<li>Doris数据读取流程
+<ul>
+<li><code>Reader</code>-&gt; <code>RowsetReader</code> -&gt; <code>SegmentIterator</code></li>
+<li><img src="https://tong-hao.github.io/post-images/1721367948244.png" alt="" loading="lazy"></li>
+<li>Reader相当于一个表</li>
+<li><code>TupleReader</code>
+<ul>
+<li><code>_direct_next_row</code>  key不排序</li>
+<li><code>_agg_key_next_row</code> key是排序的，可以用于做聚合</li>
+<li><code>_unique_key_next_row</code> key去重</li>
+</ul>
+</li>
+<li><code>CollectIterator</code></li>
+<li><code>RowSetReader</code></li>
+<li><img src="https://tong-hao.github.io/post-images/1721367964487.png" alt="" loading="lazy"></li>
+</ul>
+</li>
+<li>page的结构
+<ul>
+<li><img src="https://tong-hao.github.io/post-images/1721367979430.png" alt="" loading="lazy"></li>
+<li>类型：IndexPage/DataPage/DictionaryPage/ShortKeyPage</li>
+<li>压缩：LZ4、LZ4f、Snappy、Zlib</li>
+</ul>
+</li>
+<li><code>PageCache</code>
+<ul>
+<li>类型：<code>IndexPage</code>, <code>DataPage</code></li>
+<li>策略：LRUCache</li>
+<li>配置：
+<ul>
+<li>storage_page_cache_limit</li>
+<li>index_page_cache_percentage</li>
+<li>disable_storage_page_cache</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>Cache存储
+<ul>
+<li>CacheKey：文件名+offset</li>
+<li>内存结构：双向链表</li>
+<li>引用计数的CacheHandle</li>
+<li>Cache优先级：Normal/Durable
+<ul>
+<li>如果表为in_memmory，PageCache为Durable</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[doris-FE与BE的任务交互]]></title>
+        <id>https://tong-hao.github.io/Hxe-2kCjz/</id>
+        <link href="https://tong-hao.github.io/Hxe-2kCjz/">
+        </link>
+        <updated>2024-07-19T05:44:06.000Z</updated>
+        <content type="html"><![CDATA[<figure data-type="image" tabindex="1"><img src="https://tong-hao.github.io/post-images/1721367869972.png" alt="" loading="lazy"></figure>
+<p>FE发送：</p>
+<ul>
+<li><code>AgentBatchTask</code> 批量发送task给BE</li>
+<li><code>AgentTaskExecutor</code></li>
+</ul>
+<p>BE接收：</p>
+<ul>
+<li><code>agent_server.cpp</code> 接收task</li>
+<li><code>task_worker_pool.cpp</code> 工作线程池</li>
+</ul>
+<p>FE接收：</p>
+<ul>
+<li><code>FrontendServiceImpl</code></li>
+<li><code>MasterImpl::finishTask</code></li>
+</ul>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[doris-查询优化器]]></title>
+        <id>https://tong-hao.github.io/Shp4F8ZfH/</id>
+        <link href="https://tong-hao.github.io/Shp4F8ZfH/">
+        </link>
+        <updated>2024-07-19T05:42:49.000Z</updated>
+        <content type="html"><![CDATA[<ul>
+<li>优化器目的：find best plan</li>
+<li>query改写
+<ul>
+<li>表达式改写
+<ul>
+<li><code>ExprRewriteRule</code> 接口，如：<code>CompundPredicateWriteRule</code> 子类</li>
+<li>注册表达式规则</li>
+</ul>
+</li>
+<li>子查询改写
+<ul>
+<li><code>rewriteSelectStament</code>方法</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>Join order优化
+<ul>
+<li>代码入口:<code>createJoinPlan</code></li>
+</ul>
+</li>
+<li>谓词下推</li>
+<li>如何分布式join？
+<ul>
+<li>如：表a和表b进行join</li>
+<li>方法1: 分布式的情况下需要将较小的表分发到各个存储节点上</li>
+<li>方法2: 表a和表b的分片一样，不需要分发。</li>
+<li>代码入口：<code>createHashJoinFragment</code></li>
+</ul>
+</li>
+<li>如何分布式Agg？
+<ul>
+<li>现执行 Agg local</li>
+<li>再执行 Agg global</li>
+</ul>
+</li>
+</ul>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[doris-sql执行过程]]></title>
+        <id>https://tong-hao.github.io/-vby9nkEj/</id>
+        <link href="https://tong-hao.github.io/-vby9nkEj/">
+        </link>
+        <updated>2024-07-19T05:39:34.000Z</updated>
+        <content type="html"><![CDATA[<figure data-type="image" tabindex="1"><img src="https://tong-hao.github.io/post-images/1721367646165.png" alt="" loading="lazy"></figure>
+<h2 id="sql到查询计划">sql到查询计划</h2>
+<p>sql到查询计划需要两步：<code>Sql -&gt; PlanNodeTree -&gt; PlanFragmentTree</code></p>
+<ul>
+<li>PlanNodeTree 逻辑执行计划</li>
+<li>PlanFragmentTree 是基于分布式的逻辑计划</li>
+<li>PlanNode是一个逻辑算子</li>
+</ul>
+<p>第一步：<br>
+<img src="https://tong-hao.github.io/post-images/1721367666204.png" alt="" loading="lazy"></p>
+<p>第二步：<br>
+PlanNodeTree是没办法给分布式数据库执行的，需要进行拆解<br>
+<img src="https://tong-hao.github.io/post-images/1721367680906.png" alt="" loading="lazy"></p>
+<ul>
+<li>DataSink负责发送数据</li>
+<li>ExchangeNode负责接收数据</li>
+<li>Plan Fragment = PlanNode + DataSink
+<ul>
+<li>除了root节点，其他节点都有个DataSink</li>
+</ul>
+</li>
+</ul>
+<h2 id="执行查询">执行查询</h2>
+<h3 id="分配be分发给be">分配BE+分发给BE</h3>
+<ul>
+<li>主要代码在 <code>Coordinator.java</code></li>
+<li>步骤为：
+<ul>
+<li>prepare：初始化工作</li>
+<li>scheduler: 给Fragment分配BE
+<ul>
+<li>computeScanRange</li>
+<li>assignFragment</li>
+</ul>
+</li>
+<li>send</li>
+</ul>
+</li>
+</ul>
+<h2 id="fragment的执行">Fragment的执行</h2>
+<ul>
+<li>主要类 PlanFragmentExecutor</li>
+<li>步骤：
+<ul>
+<li>prepare</li>
+<li>open
+<ul>
+<li>open plan node tree</li>
+<li>open sink</li>
+<li>对plan执行next获取记录，并调用sink发送</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<h2 id="topfragment">TopFragment</h2>
+<ul>
+<li>执行计划的结果会放到TopFragment，在BE侧
+<ul>
+<li>拉取的数据会放到<code>MysqlChannel.java</code>中，到达一定的量后会发送</li>
+</ul>
+</li>
+<li>在FE侧的Coordinator会到TopFragment拉取数据</li>
+</ul>
+<figure data-type="image" tabindex="2"><img src="https://tong-hao.github.io/post-images/1721367697012.png" alt="" loading="lazy"></figure>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[pg-代码-事务ID回绕问题]]></title>
+        <id>https://tong-hao.github.io/BlvUamky8/</id>
+        <link href="https://tong-hao.github.io/BlvUamky8/">
+        </link>
+        <updated>2024-06-19T04:19:17.000Z</updated>
+        <content type="html"><![CDATA[<p>pg为了减少存储空间，将事务ID设置为uint32。但是如果数据量超过40亿就会出问题，无法比较事务的先后。<br>
+为了解决这个问题，pg提供了<code>TransactionIdPrecedes</code>函数进行判断事务的先后。</p>
+<p>代码如下：</p>
+<pre><code class="language-c">#include &lt;iostream&gt;
+
+using TransactionId = uint32_t;
+using int32 = int32_t;
+
+bool TransactionIdIsNormal(TransactionId id) {
+	return id &gt;= 3;
+}
+
+bool TransactionIdPrecedes(TransactionId id1, TransactionId id2) {
+	/*
+	 * If either ID is a permanent XID then we can just do unsigned
+	 * comparison.	If both are normal, do a modulo-2^31 comparison.
+	 */
+	int32 diff;
+
+	if (!TransactionIdIsNormal(id1) || !TransactionIdIsNormal(id2))
+		return (id1 &lt; id2);
+
+	diff = (int32)(id1 - id2);
+	return (diff &lt; 0);
+}
+
+int main() {
+	TransactionId id = (1 &lt;&lt; 31) + 1000000;
+	std::cout &lt;&lt; TransactionIdPrecedes(11, 100) &lt;&lt; std::endl;  // true
+	std::cout &lt;&lt; TransactionIdPrecedes(11, id)
+	          &lt;&lt; std::endl;  // false, 因为 11 - （2^31+1000000)
+	                         // 会超过int32的范围，会回绕。 得到的结果是一个正数
+	std::cout &lt;&lt; TransactionIdPrecedes(1, id) &lt;&lt; std::endl;
+	return 0;
+}
+</code></pre>
+<ul>
+<li><code>TransactionIdPrecedes</code> 函数是pg中的代码，用于判断事务id1是否先于id2</li>
+<li>关键代码 <code>diff = (int32)(id1 - id2);</code> 如果 <code>id1 - id2</code> 不在 int32的范围<code>[-2^32, 2^32-1]</code> 范围就会进行回绕。比如：2^31+100 转成int32 就会是负数。</li>
+</ul>
+]]></content>
+    </entry>
+</feed>

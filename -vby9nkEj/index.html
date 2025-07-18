@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" >
+
+<title>doris-sql执行过程 | Caton Blog</title>
+
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="shortcut icon" href="https://tong-hao.github.io/favicon.ico?v=1752831806033">
+<link rel="stylesheet" href="https://tong-hao.github.io/styles/main.css">
+
+
+  
+    <link rel="stylesheet" href="https://unpkg.com/gitalk/dist/gitalk.css" />
+  
+
+  
+
+
+<link rel="stylesheet" href="https://unpkg.com/aos@next/dist/aos.css" />
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+
+
+
+    <meta name="description" content="
+sql到查询计划
+sql到查询计划需要两步：Sql -&gt; PlanNodeTree -&gt; PlanFragmentTree
+
+PlanNodeTree 逻辑执行计划
+PlanFragmentTree 是基于分布式的逻辑计划
+P..." />
+    <meta name="keywords" content="doris" />
+  </head>
+  <body>
+    <div id="app" class="main">
+
+      <div class="sidebar" :class="{ 'full-height': menuVisible }">
+  <div class="top-container" data-aos="fade-right">
+    <div class="top-header-container">
+      <a class="site-title-container" href="https://tong-hao.github.io">
+        <img src="https://tong-hao.github.io/images/avatar.png?v=1752831806033" class="site-logo">
+        <h1 class="site-title">Caton Blog</h1>
+      </a>
+      <div class="menu-btn" @click="menuVisible = !menuVisible">
+        <div class="line"></div>
+      </div>
+    </div>
+    <div>
+      
+        
+          <a href="/" class="site-nav">
+            首页
+          </a>
+        
+      
+        
+          <a href="/archives" class="site-nav">
+            归档
+          </a>
+        
+      
+        
+          <a href="/tags" class="site-nav">
+            标签
+          </a>
+        
+      
+        
+          <a href="/about" class="site-nav">
+            关于
+          </a>
+        
+      
+        
+          <a href="/doris" class="site-nav">
+            #doris
+          </a>
+        
+      
+        
+          <a href="/pg" class="site-nav">
+            #postgresql
+          </a>
+        
+      
+        
+          <a href="/db" class="site-nav">
+            #数据库内核
+          </a>
+        
+      
+        
+          <a href="/graph-computer/" class="site-nav">
+            #图计算
+          </a>
+        
+      
+        
+          <a href="/graph-db" class="site-nav">
+            #图数据库
+          </a>
+        
+      
+        
+          <a href="/creation" class="site-nav">
+            #个人作品
+          </a>
+        
+      
+    </div>
+  </div>
+  <div class="bottom-container" data-aos="flip-up" data-aos-offset="0">
+    <div class="social-container">
+      
+        
+          <a class="social-link" href="https://github.com/tong-hao" target="_blank">
+            <i class="fab fa-github"></i>
+          </a>
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    </div>
+    <div class="site-description">
+      ✍️一个专注于数据库的博客
+    </div>
+    <div class="site-footer">
+       | <a class="rss" href="https://tong-hao.github.io/atom.xml" target="_blank">RSS</a>
+    </div>
+  </div>
+</div>
+
+
+      <div class="main-container">
+        <div class="content-container" data-aos="fade-up">
+          <div class="post-detail">
+            <h2 class="post-title">doris-sql执行过程</h2>
+            <div class="post-date">2024-07-19</div>
+            
+            <div class="post-content" v-pre>
+              <figure data-type="image" tabindex="1"><img src="https://tong-hao.github.io/post-images/1721367646165.png" alt="" loading="lazy"></figure>
+<h2 id="sql到查询计划">sql到查询计划</h2>
+<p>sql到查询计划需要两步：<code>Sql -&gt; PlanNodeTree -&gt; PlanFragmentTree</code></p>
+<ul>
+<li>PlanNodeTree 逻辑执行计划</li>
+<li>PlanFragmentTree 是基于分布式的逻辑计划</li>
+<li>PlanNode是一个逻辑算子</li>
+</ul>
+<p>第一步：<br>
+<img src="https://tong-hao.github.io/post-images/1721367666204.png" alt="" loading="lazy"></p>
+<p>第二步：<br>
+PlanNodeTree是没办法给分布式数据库执行的，需要进行拆解<br>
+<img src="https://tong-hao.github.io/post-images/1721367680906.png" alt="" loading="lazy"></p>
+<ul>
+<li>DataSink负责发送数据</li>
+<li>ExchangeNode负责接收数据</li>
+<li>Plan Fragment = PlanNode + DataSink
+<ul>
+<li>除了root节点，其他节点都有个DataSink</li>
+</ul>
+</li>
+</ul>
+<h2 id="执行查询">执行查询</h2>
+<h3 id="分配be分发给be">分配BE+分发给BE</h3>
+<ul>
+<li>主要代码在 <code>Coordinator.java</code></li>
+<li>步骤为：
+<ul>
+<li>prepare：初始化工作</li>
+<li>scheduler: 给Fragment分配BE
+<ul>
+<li>computeScanRange</li>
+<li>assignFragment</li>
+</ul>
+</li>
+<li>send</li>
+</ul>
+</li>
+</ul>
+<h2 id="fragment的执行">Fragment的执行</h2>
+<ul>
+<li>主要类 PlanFragmentExecutor</li>
+<li>步骤：
+<ul>
+<li>prepare</li>
+<li>open
+<ul>
+<li>open plan node tree</li>
+<li>open sink</li>
+<li>对plan执行next获取记录，并调用sink发送</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<h2 id="topfragment">TopFragment</h2>
+<ul>
+<li>执行计划的结果会放到TopFragment，在BE侧
+<ul>
+<li>拉取的数据会放到<code>MysqlChannel.java</code>中，到达一定的量后会发送</li>
+</ul>
+</li>
+<li>在FE侧的Coordinator会到TopFragment拉取数据</li>
+</ul>
+<figure data-type="image" tabindex="2"><img src="https://tong-hao.github.io/post-images/1721367697012.png" alt="" loading="lazy"></figure>
+
+            </div>
+            
+              <div class="tag-container">
+                
+                  <a href="https://tong-hao.github.io/doris/" class="tag">
+                    doris
+                  </a>
+                
+              </div>
+            
+            
+              <div class="next-post">
+                <div class="next">下一篇</div>
+                <a href="https://tong-hao.github.io/BlvUamky8/">
+                  <h3 class="post-title">
+                    pg-代码-事务ID回绕问题
+                  </h3>
+                </a>
+              </div>
+            
+
+            
+              
+                <div id="gitalk-container" data-aos="fade-in"></div>
+              
+
+              
+            
+
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <script src="https://unpkg.com/aos@next/dist/aos.js"></script>
+<script type="application/javascript">
+
+AOS.init();
+
+var app = new Vue({
+  el: '#app',
+  data: {
+    menuVisible: false,
+  },
+})
+
+</script>
+
+
+  <script src="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.5.1/build/highlight.min.js"></script>
+  <script>
+    hljs.initHighlightingOnLoad()
+  </script>
+
+
+
+
+  
+    <script src="https://unpkg.com/gitalk/dist/gitalk.min.js"></script>
+    <script>
+
+      var gitalk = new Gitalk({
+        clientID: 'Iv23lit3WMjXHUkoxS5B',
+        clientSecret: '2654edec437559b9b027d9699017207fdb229659',
+        repo: 'tong-hao.github.io',
+        owner: 'tong-hao',
+        admin: ['tong-hao'],
+        id: (location.pathname).substring(0, 49),      // Ensure uniqueness and length less than 50
+        distractionFreeMode: false  // Facebook-like distraction free mode
+      })
+
+      gitalk.render('gitalk-container')
+
+    </script>
+  
+
+  
+
+
+
+
+  </body>
+</html>

@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" >
+
+<title>pg-full vacuum | Caton Blog</title>
+
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="shortcut icon" href="https://tong-hao.github.io/favicon.ico?v=1752831806033">
+<link rel="stylesheet" href="https://tong-hao.github.io/styles/main.css">
+
+
+  
+    <link rel="stylesheet" href="https://unpkg.com/gitalk/dist/gitalk.css" />
+  
+
+  
+
+
+<link rel="stylesheet" href="https://unpkg.com/aos@next/dist/aos.css" />
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+
+
+
+    <meta name="description" content="Concurrent VACUUM不能释放存储空间
+
+（图1）
+
+图1中有3个page，每个page有6个tuple
+当执行DELETE FROM tbl WHERE id % 6 != 0; 后，做 Concurrent VACUUM
+表..." />
+    <meta name="keywords" content="postgresql" />
+  </head>
+  <body>
+    <div id="app" class="main">
+
+      <div class="sidebar" :class="{ 'full-height': menuVisible }">
+  <div class="top-container" data-aos="fade-right">
+    <div class="top-header-container">
+      <a class="site-title-container" href="https://tong-hao.github.io">
+        <img src="https://tong-hao.github.io/images/avatar.png?v=1752831806033" class="site-logo">
+        <h1 class="site-title">Caton Blog</h1>
+      </a>
+      <div class="menu-btn" @click="menuVisible = !menuVisible">
+        <div class="line"></div>
+      </div>
+    </div>
+    <div>
+      
+        
+          <a href="/" class="site-nav">
+            首页
+          </a>
+        
+      
+        
+          <a href="/archives" class="site-nav">
+            归档
+          </a>
+        
+      
+        
+          <a href="/tags" class="site-nav">
+            标签
+          </a>
+        
+      
+        
+          <a href="/about" class="site-nav">
+            关于
+          </a>
+        
+      
+        
+          <a href="/doris" class="site-nav">
+            #doris
+          </a>
+        
+      
+        
+          <a href="/pg" class="site-nav">
+            #postgresql
+          </a>
+        
+      
+        
+          <a href="/db" class="site-nav">
+            #数据库内核
+          </a>
+        
+      
+        
+          <a href="/graph-computer/" class="site-nav">
+            #图计算
+          </a>
+        
+      
+        
+          <a href="/graph-db" class="site-nav">
+            #图数据库
+          </a>
+        
+      
+        
+          <a href="/creation" class="site-nav">
+            #个人作品
+          </a>
+        
+      
+    </div>
+  </div>
+  <div class="bottom-container" data-aos="flip-up" data-aos-offset="0">
+    <div class="social-container">
+      
+        
+          <a class="social-link" href="https://github.com/tong-hao" target="_blank">
+            <i class="fab fa-github"></i>
+          </a>
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    </div>
+    <div class="site-description">
+      ✍️一个专注于数据库的博客
+    </div>
+    <div class="site-footer">
+       | <a class="rss" href="https://tong-hao.github.io/atom.xml" target="_blank">RSS</a>
+    </div>
+  </div>
+</div>
+
+
+      <div class="main-container">
+        <div class="content-container" data-aos="fade-up">
+          <div class="post-detail">
+            <h2 class="post-title">pg-full vacuum</h2>
+            <div class="post-date">2024-06-11</div>
+            
+            <div class="post-content" v-pre>
+              <h2 id="concurrent-vacuum不能释放存储空间">Concurrent VACUUM不能释放存储空间</h2>
+<p><img src="https://tong-hao.github.io/post-images/1718074232999.webp" alt="" loading="lazy"><br>
+（图1）</p>
+<ul>
+<li>图1中有3个page，每个page有6个tuple</li>
+<li>当执行<code>DELETE FROM tbl WHERE id % 6 != 0;</code> 后，做 Concurrent VACUUM</li>
+<li>表的存储空间并没有释放。</li>
+<li>full vacuum就是解决这个问题的</li>
+</ul>
+<h2 id="full-vacuum过程">full vacuum过程</h2>
+<p><img src="https://tong-hao.github.io/post-images/1718074248744.webp" alt="" loading="lazy"><br>
+（图2）</p>
+<p>full vacuum的执行过程如下：</p>
+<pre><code>(1)  FOR each table
+(2)     Acquire AccessExclusiveLock lock for the table
+(3)     Create a new table file
+(4)     FOR each live tuple in the old table
+(5)        Copy the live tuple to the new table file
+(6)        Freeze the tuple IF necessary
+        END FOR
+(7)     Remove the old table file
+(8)     Rebuild all indexes
+(9)     Update FSM and VM
+(10)    Update statistics
+        Release AccessExclusiveLock lock
+     END FOR
+(11) Remove unnecessary clog files and pages if possible
+</code></pre>
+<ol>
+<li>遍历每个表</li>
+<li>为这个表获取锁</li>
+<li>创建一个新的表文件</li>
+<li>遍历表中的所有记录</li>
+<li>将有效的tuple拷贝到新的表文件中</li>
+<li>冻结tuple</li>
+<li>删除旧的表文件</li>
+<li>为新表文件生成索引</li>
+<li>更新fsm文件和vm文件</li>
+<li>更新统计信息</li>
+<li>清理clog</li>
+</ol>
+<p>#发布ing</p>
+
+            </div>
+            
+              <div class="tag-container">
+                
+                  <a href="https://tong-hao.github.io/pg/" class="tag">
+                    postgresql
+                  </a>
+                
+              </div>
+            
+            
+              <div class="next-post">
+                <div class="next">下一篇</div>
+                <a href="https://tong-hao.github.io/cruRMXhpm/">
+                  <h3 class="post-title">
+                    pg-autovacuum daemon
+                  </h3>
+                </a>
+              </div>
+            
+
+            
+              
+                <div id="gitalk-container" data-aos="fade-in"></div>
+              
+
+              
+            
+
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <script src="https://unpkg.com/aos@next/dist/aos.js"></script>
+<script type="application/javascript">
+
+AOS.init();
+
+var app = new Vue({
+  el: '#app',
+  data: {
+    menuVisible: false,
+  },
+})
+
+</script>
+
+
+  <script src="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.5.1/build/highlight.min.js"></script>
+  <script>
+    hljs.initHighlightingOnLoad()
+  </script>
+
+
+
+
+  
+    <script src="https://unpkg.com/gitalk/dist/gitalk.min.js"></script>
+    <script>
+
+      var gitalk = new Gitalk({
+        clientID: 'Iv23lit3WMjXHUkoxS5B',
+        clientSecret: '2654edec437559b9b027d9699017207fdb229659',
+        repo: 'tong-hao.github.io',
+        owner: 'tong-hao',
+        admin: ['tong-hao'],
+        id: (location.pathname).substring(0, 49),      // Ensure uniqueness and length less than 50
+        distractionFreeMode: false  // Facebook-like distraction free mode
+      })
+
+      gitalk.render('gitalk-container')
+
+    </script>
+  
+
+  
+
+
+
+
+  </body>
+</html>

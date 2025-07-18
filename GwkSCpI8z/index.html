@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" >
+
+<title>duckdb | Caton Blog</title>
+
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="shortcut icon" href="https://tong-hao.github.io/favicon.ico?v=1752831806033">
+<link rel="stylesheet" href="https://tong-hao.github.io/styles/main.css">
+
+
+  
+    <link rel="stylesheet" href="https://unpkg.com/gitalk/dist/gitalk.css" />
+  
+
+  
+
+
+<link rel="stylesheet" href="https://unpkg.com/aos@next/dist/aos.css" />
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+
+
+
+    <meta name="description" content="duckdb是OLAP 版本的 SQLite
+1 代码量 80w
+--------------------------------------------
+Language     files    blank  comment    co..." />
+    <meta name="keywords" content="数据库,论文" />
+  </head>
+  <body>
+    <div id="app" class="main">
+
+      <div class="sidebar" :class="{ 'full-height': menuVisible }">
+  <div class="top-container" data-aos="fade-right">
+    <div class="top-header-container">
+      <a class="site-title-container" href="https://tong-hao.github.io">
+        <img src="https://tong-hao.github.io/images/avatar.png?v=1752831806033" class="site-logo">
+        <h1 class="site-title">Caton Blog</h1>
+      </a>
+      <div class="menu-btn" @click="menuVisible = !menuVisible">
+        <div class="line"></div>
+      </div>
+    </div>
+    <div>
+      
+        
+          <a href="/" class="site-nav">
+            首页
+          </a>
+        
+      
+        
+          <a href="/archives" class="site-nav">
+            归档
+          </a>
+        
+      
+        
+          <a href="/tags" class="site-nav">
+            标签
+          </a>
+        
+      
+        
+          <a href="/about" class="site-nav">
+            关于
+          </a>
+        
+      
+        
+          <a href="/doris" class="site-nav">
+            #doris
+          </a>
+        
+      
+        
+          <a href="/pg" class="site-nav">
+            #postgresql
+          </a>
+        
+      
+        
+          <a href="/db" class="site-nav">
+            #数据库内核
+          </a>
+        
+      
+        
+          <a href="/graph-computer/" class="site-nav">
+            #图计算
+          </a>
+        
+      
+        
+          <a href="/graph-db" class="site-nav">
+            #图数据库
+          </a>
+        
+      
+        
+          <a href="/creation" class="site-nav">
+            #个人作品
+          </a>
+        
+      
+    </div>
+  </div>
+  <div class="bottom-container" data-aos="flip-up" data-aos-offset="0">
+    <div class="social-container">
+      
+        
+          <a class="social-link" href="https://github.com/tong-hao" target="_blank">
+            <i class="fab fa-github"></i>
+          </a>
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    </div>
+    <div class="site-description">
+      ✍️一个专注于数据库的博客
+    </div>
+    <div class="site-footer">
+       | <a class="rss" href="https://tong-hao.github.io/atom.xml" target="_blank">RSS</a>
+    </div>
+  </div>
+</div>
+
+
+      <div class="main-container">
+        <div class="content-container" data-aos="fade-up">
+          <div class="post-detail">
+            <h2 class="post-title">duckdb</h2>
+            <div class="post-date">2024-06-01</div>
+            
+            <div class="post-content" v-pre>
+              <p>duckdb是OLAP 版本的 SQLite</p>
+<h2 id="1-代码量-80w">1 代码量 80w</h2>
+<pre><code>--------------------------------------------
+Language     files    blank  comment    code
+--------------------------------------------
+C++           2324    87261   120129  604555
+C/C++ Header  2288    56143   181668  272262
+
+</code></pre>
+<h2 id="2-代码结构">2 代码结构</h2>
+<pre><code>duckdb/src$ tree -L 1
+.
+├── CMakeLists.txt
+├── README.md
+├── catalog
+├── common
+├── core_functions
+├── execution // 
+├── function
+├── include
+├── main
+├── optimizer // 
+├── parallel
+├── parser // 
+├── planner // 
+├── storage // 
+├── transaction
+└── verification
+</code></pre>
+<h2 id="3-sql执行-代码流程">3 SQL执行-代码流程</h2>
+<p><code>query -&gt; parser -&gt; planner -&gt; optimizer -&gt; execution -&gt; storage</code></p>
+<pre><code>Connection::Query
+  ClientContext::Query
+    ClientContext::ParseStatements
+      ClientContext::ParseStatementsInternal
+        Parser::ParseQuery
+          PostgresParser::Parse
+            Transformer::TransformParseTree
+    ClientContext::PendingQueryInternal
+      ClientContext::PendingStatementOrPreparedStatement
+        ClientContext::PendingPreparedStatement
+           MetaTransaction::Get
+        ClientContext::FetchResultInternal
+        Executor::GetResult
+      
+
+</code></pre>
+<h2 id="4-create-table-流程">4 create table 流程</h2>
+<pre><code>Connection::Query(const string &amp;query)
+  ClientContext::Query
+    ClientContext::ParseStatements
+      ClientContext::ParseStatementsInternal
+        Parser::ParseQuery(const string &amp;query）
+          PostgresParser::Parse(const std::string &amp;query)
+            // 将Postgres parse tree转成SQLStatements
+            Transformer::TransformParseTree 
+              Transformer::TransformStatement
+                Transformer::TransformStatementInternal
+                  Transformer::TransformCreateTable
+        PragmaHandler::HandlePragmaStatements
+    ClientContext::PendingQueryInternal
+      ClientContext::PendingStatementOrPreparedStatementInternal
+        ClientContext::PendingStatementOrPreparedStatement
+          ClientContext::BeginQueryInternal
+          ClientContext::PendingStatementInternal
+            ClientContext::CreatePreparedStatement
+              Planner::CreatePlan
+                Binder::Bind
+              Optimizer::Optimize
+              PhysicalPlanGenerator::CreatePlan
+    ClientContext::ExecutePendingQueryInternal
+      PendingQueryResult::ExecuteInternal
+      PendingQueryResult::ExecuteTaskInternal
+        ClientContext::ExecuteTaskInternal
+          Executor::ExecuteTask()
+          ExecutorTask::Execute
+            ExecuteTask(TaskExecutionMode mode)
+              PipelineExecutor::Execute
+                PipelineExecutor::ExecutePushInternal 
+                //未完
+
+</code></pre>
+<p>创建表的物理操作：</p>
+<pre><code>PhysicalCreateSchema.cpp
+ PhysicalCreateSchema::GetData
+  Catalog::CreateSchema
+   DuckCatalog::CreateSchema
+    DuckCatalog::CreateSchemaInternal
+     CatalogSet::CreateEntry
+      CatalogSet::PutMapping
+       CatalogSet::PutEntry
+        DuckTransaction::PushCatalogEntry
+</code></pre>
+<h2 id="5-组件">5 组件</h2>
+<p>“separation of components: Parser, logical planner, optimizer, physical planner, execution engine.” (<a href="zotero://open-pdf/library/items/LQ4TXTGS?page=2&amp;annotation=59EIKY7K">pdf</a>)<br>
+TODO：逻辑计划、物理计划在代码中如何执行的？</p>
+<p>![[duckdb-20231204154606063.webp]]</p>
+<h3 id="51-sql-parser">5.1 SQL Parser</h3>
+<p>首先会调用pg的parser转成ParseTree，再将<code>PG的ParseTree</code>转成 <code>duckdb的ParseTree</code></p>
+<p>third party <a href="https://github.com/pganalyze/libpg_query">libpg_query</a>:</p>
+<pre><code class="language-c++">PostgresParser parser;
+parser.Parse(query);
+</code></pre>
+<p><code>PG的ParseTree</code>转 <code>duckdb的ParseTree</code>:</p>
+<pre><code class="language-c++">bool Transformer::TransformParseTree(duckdb_libpgquery::PGList *tree, vector&lt;unique_ptr&lt;SQLStatement&gt;&gt; &amp;statements) {
+	InitializeStackCheck();
+	for (auto entry = tree-&gt;head; entry != nullptr; entry = entry-&gt;next) {
+		Clear();
+		auto n = PGPointerCast&lt;duckdb_libpgquery::PGNode&gt;(entry-&gt;data.ptr_value);
+		auto stmt = TransformStatement(*n);
+		D_ASSERT(stmt);
+		if (HasPivotEntries()) {
+			stmt = CreatePivotStatement(std::move(stmt));
+		}
+		stmt-&gt;n_param = ParamCount();
+		statements.push_back(std::move(stmt));
+	}
+	return true;
+}
+</code></pre>
+<h3 id="52-logical-planner">5.2 Logical planner</h3>
+<p>logical planner 由binder 和 plan generator 两部分组成的。<br>
+binder 主要解决table 、view、列名等问题。<br>
+plan generator 是将parse tree转化成含有<code>Project、Scan、filter</code>这样的Parse Tree。</p>
+<h3 id="53-optimizer">5.3 Optimizer</h3>
+<p>采用了动态规划算法。<br>
+优化器会根据 <code>重写规则</code> 简化 <code>expression tree</code>。</p>
+<p>论文：<code>[7] Guido Moerkotte and Thomas Neumann. 2008. Dynamic programming strikes back. In Proceedings of the ACM SIGMOD International Conference on Management of Data, SIGMOD 2008, Vancouver, BC, Canada, June 10-12, 2008. 539–552. https://doi.org/10.1145/1376616.1376672</code></p>
+<h3 id="54-physical-planner">5.4 Physical planner</h3>
+<p><code>physical planner</code> 会将 <code>logical plan</code>转化成 <code>physical plan</code>。<br>
+例如：scan算子会转化成 <code>index scan</code>。使用<code>table scan</code>还是<code>index scan</code>这里有一些选择性的评估。</p>
+<h3 id="55-execution-engine">5.5 Execution Engine</h3>
+<p>向量化执行引擎是如何实现的？ #todo</p>
+<p><code>Execution Engine</code> 采用了 <code>Vector Volcano</code> 模型。它会pull一个chunk（具体流程还需要细看） #todo</p>
+<p>论文：<code>[1] Peter A. Boncz, Marcin Zukowski, and Niels Nes. 2005. MonetDB/X100: Hyper-Pipelining Query Execution. In CIDR 2005, Second Biennial Conference on Innovative Data Systems Research, Asilomar, CA, USA, January 4-7, 2005. 225–237. http://cidrdb.org/cidr2005/papers/P19.pdf</code></p>
+<h3 id="56-concurrency-control">5.6 Concurrency Control</h3>
+<p>MVCC的实现？ #todo</p>
+<p>它的mvcc是专门为 OLAP/OLTP 系统定制的，支持serializable 隔离。</p>
+<p>论文: <code>[10]Thomas Neumann, Tobias Mühlbauer, and Alfons Kemper. 2015. Fast Serializable Multi-Version Concurrency Control for Main-Memory Database Systems. In Proceedings of the 2015 ACM SIGMOD International Conference on Management of Data, Melbourne, Victoria, Australia, May 31 - June 4, 2015. 677–689. https://doi.org/10.1145/2723372. 2749436</code></p>
+<h2 id="6-storage">6 Storage</h2>
+<p>Storage中数据是怎么保存的？ #todo</p>
+<p>DuckDB uses the read-optimized <code>DataBlocks storage layout</code>.</p>
+<p>论文：<code>[5]Harald Lang, Tobias Mühlbauer, Florian Funke, et al. 2016. Data Blocks: Hybrid OLTP and OLAP on Compressed Storage using both Vectorization and Compilation. In Proceedings of the 2016 International Conference on Management of Data, SIGMOD Conference 2016, San Francisco, CA, USA, June 26 - July 01, 2016. 311–326. https: //doi.org/10.1145/2882903.2882925</code></p>
+<h2 id="7-参考资料">7 参考资料</h2>
+<ul>
+<li>论文 《DuckDB: an Embeddable Analytical Database》 // 这篇论文挺简单的，也列出了很多有价值的参考论文</li>
+<li>代码：https://github.com/duckdb/duckdb</li>
+</ul>
+
+            </div>
+            
+              <div class="tag-container">
+                
+                  <a href="https://tong-hao.github.io/db/" class="tag">
+                    数据库
+                  </a>
+                
+                  <a href="https://tong-hao.github.io/paper/" class="tag">
+                    论文
+                  </a>
+                
+              </div>
+            
+            
+              <div class="next-post">
+                <div class="next">下一篇</div>
+                <a href="https://tong-hao.github.io/Erbwx1H-n/">
+                  <h3 class="post-title">
+                    cpp-template与lambda 结合使用
+                  </h3>
+                </a>
+              </div>
+            
+
+            
+              
+                <div id="gitalk-container" data-aos="fade-in"></div>
+              
+
+              
+            
+
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <script src="https://unpkg.com/aos@next/dist/aos.js"></script>
+<script type="application/javascript">
+
+AOS.init();
+
+var app = new Vue({
+  el: '#app',
+  data: {
+    menuVisible: false,
+  },
+})
+
+</script>
+
+
+  <script src="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.5.1/build/highlight.min.js"></script>
+  <script>
+    hljs.initHighlightingOnLoad()
+  </script>
+
+
+
+
+  
+    <script src="https://unpkg.com/gitalk/dist/gitalk.min.js"></script>
+    <script>
+
+      var gitalk = new Gitalk({
+        clientID: 'Iv23lit3WMjXHUkoxS5B',
+        clientSecret: '2654edec437559b9b027d9699017207fdb229659',
+        repo: 'tong-hao.github.io',
+        owner: 'tong-hao',
+        admin: ['tong-hao'],
+        id: (location.pathname).substring(0, 49),      // Ensure uniqueness and length less than 50
+        distractionFreeMode: false  // Facebook-like distraction free mode
+      })
+
+      gitalk.render('gitalk-container')
+
+    </script>
+  
+
+  
+
+
+
+
+  </body>
+</html>

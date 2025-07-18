@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" >
+
+<title>论文_powergraph | Caton Blog</title>
+
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="shortcut icon" href="https://tong-hao.github.io/favicon.ico?v=1752831806033">
+<link rel="stylesheet" href="https://tong-hao.github.io/styles/main.css">
+
+
+  
+    <link rel="stylesheet" href="https://unpkg.com/gitalk/dist/gitalk.css" />
+  
+
+  
+
+
+<link rel="stylesheet" href="https://unpkg.com/aos@next/dist/aos.css" />
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+
+
+
+    <meta name="description" content="
+PowerGraph: Distributed Graph-Parallel Computation on Natural Graphs
+
+1. Graph-Parallel Abstractions
+1.1 pregel
+
+pregel..." />
+    <meta name="keywords" content="图计算,论文" />
+  </head>
+  <body>
+    <div id="app" class="main">
+
+      <div class="sidebar" :class="{ 'full-height': menuVisible }">
+  <div class="top-container" data-aos="fade-right">
+    <div class="top-header-container">
+      <a class="site-title-container" href="https://tong-hao.github.io">
+        <img src="https://tong-hao.github.io/images/avatar.png?v=1752831806033" class="site-logo">
+        <h1 class="site-title">Caton Blog</h1>
+      </a>
+      <div class="menu-btn" @click="menuVisible = !menuVisible">
+        <div class="line"></div>
+      </div>
+    </div>
+    <div>
+      
+        
+          <a href="/" class="site-nav">
+            首页
+          </a>
+        
+      
+        
+          <a href="/archives" class="site-nav">
+            归档
+          </a>
+        
+      
+        
+          <a href="/tags" class="site-nav">
+            标签
+          </a>
+        
+      
+        
+          <a href="/about" class="site-nav">
+            关于
+          </a>
+        
+      
+        
+          <a href="/doris" class="site-nav">
+            #doris
+          </a>
+        
+      
+        
+          <a href="/pg" class="site-nav">
+            #postgresql
+          </a>
+        
+      
+        
+          <a href="/db" class="site-nav">
+            #数据库内核
+          </a>
+        
+      
+        
+          <a href="/graph-computer/" class="site-nav">
+            #图计算
+          </a>
+        
+      
+        
+          <a href="/graph-db" class="site-nav">
+            #图数据库
+          </a>
+        
+      
+        
+          <a href="/creation" class="site-nav">
+            #个人作品
+          </a>
+        
+      
+    </div>
+  </div>
+  <div class="bottom-container" data-aos="flip-up" data-aos-offset="0">
+    <div class="social-container">
+      
+        
+          <a class="social-link" href="https://github.com/tong-hao" target="_blank">
+            <i class="fab fa-github"></i>
+          </a>
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    </div>
+    <div class="site-description">
+      ✍️一个专注于数据库的博客
+    </div>
+    <div class="site-footer">
+       | <a class="rss" href="https://tong-hao.github.io/atom.xml" target="_blank">RSS</a>
+    </div>
+  </div>
+</div>
+
+
+      <div class="main-container">
+        <div class="content-container" data-aos="fade-up">
+          <div class="post-detail">
+            <h2 class="post-title">论文_powergraph</h2>
+            <div class="post-date">2024-06-01</div>
+            
+            <div class="post-content" v-pre>
+              <blockquote>
+<p>PowerGraph: Distributed Graph-Parallel Computation on Natural Graphs</p>
+</blockquote>
+<h2 id="1-graph-parallel-abstractions">1. Graph-Parallel Abstractions</h2>
+<h3 id="11-pregel">1.1 pregel</h3>
+<ul>
+<li>pregel is a bulk synchronous message passing abstraction</li>
+<li>vertex-programs</li>
+<li>super-step</li>
+<li>combiner</li>
+</ul>
+<h3 id="12-graphlab">1.2 graphlab</h3>
+<ul>
+<li>GraphLab [29] is an asynchronous distributed shared- memory abstraction</li>
+<li>vertex-programs</li>
+</ul>
+<h3 id="13-powergraph">1.3 powergraph</h3>
+<ul>
+<li>GAS: Gather, Apply, and Scatter</li>
+</ul>
+<h2 id="2-challenges-of-natural-graphs">2. Challenges of Natural Graphs</h2>
+<h3 id="21-skewed-power-law-degree-distribution">2.1 skewed power-law degree distribution</h3>
+<ul>
+<li>most vertices have relatively few neighbors while a few have many neighbors</li>
+<li>公式：<img src="https://tong-hao.github.io/post-images/%E8%AE%BA%E6%96%87_powergraph/624e78b6dc63b3577a1c98d7167a0a31f411a794.webp" alt="image-20210618110704064" loading="lazy">
+<ul>
+<li>Higher α im- plies that the graph has lower density</li>
+<li>As α decreases, the graph density and number of high degree vertices increases.</li>
+<li>Most natural graphs. α ≈ 2</li>
+</ul>
+</li>
+</ul>
+<h3 id="22-challenges">2.2 challenges</h3>
+<ul>
+<li>work balance
+<ul>
+<li>Gather and Scatter phases is linear in the degree</li>
+</ul>
+</li>
+<li>partitioning
+<ul>
+<li>to minimize communication</li>
+<li>pregel and graphlab uses hash-based (random). that has poor locality.</li>
+</ul>
+</li>
+<li>communication
+<ul>
+<li>natural-graphs leads to communication asymmetry and consequently bottlenecks</li>
+</ul>
+</li>
+<li>storage
+<ul>
+<li>each vertex requires memory linear in its degree</li>
+<li>high-degree vertices can exceed the memory capacity of a single machine</li>
+</ul>
+</li>
+<li>computation
+<ul>
+<li>multiple vertex-programs may execute in parallel</li>
+<li>but not parallelize within individual vertex-programs</li>
+</ul>
+</li>
+</ul>
+<h2 id="3-powergraph-abstraction">3. PowerGraph Abstraction</h2>
+<h3 id="31-gas-vertex-programs">3.1 GAS Vertex-Programs</h3>
+<ul>
+<li>GASVertexProgram interface
+<ul>
+<li>gather, sum, apply, and scatter functions</li>
+</ul>
+</li>
+<li>[active vertexs] --gather--&gt; [au] --apply--&gt; [Du] --scatter--&gt; [D(u,v)]</li>
+<li>gather_nbrs: none, in, out, or all</li>
+<li>scatter nbrs</li>
+</ul>
+<h3 id="32-delta-caching">3.2 Delta Caching</h3>
+<ul>
+<li>scatter function can optionally return an additional ∆a</li>
+<li>If ∆a is not returned, then the neighbor's cached av is cleared</li>
+<li>∆a is used to dynamically update the cached accumulator av for the adjacent vertex</li>
+</ul>
+<figure>
+<img
+src="file:///Users/haotong/Documents/Gridea/post-images/%E8%AE%BA%E6%96%87_powergraph/3456cb13db27068e1ad7524a4ad0202bd6ec9599.webp"
+alt="image-20210618112409854" />
+<figcaption aria-hidden="true">image-20210618112409854</figcaption>
+</figure>
+<h3 id="33-initiating-future-computation">3.3 Initiating Future Computation</h3>
+<ul>
+<li>calling Activate(v) or Activate all()</li>
+<li>both synchronously and asynchronously</li>
+</ul>
+<h2 id="4-distributed-graph-placement">4. Distributed Graph Placement</h2>
+<h3 id="41-edge-cut-vs-vertex-cut">4.1 edge-cut vs. vertex-cut</h3>
+<ul>
+<li>edge-cut
+<ul>
+<li>vertices are evenly assigned to machines</li>
+<li>edges spanning machines</li>
+<li>GraphLab and Pregel resort to hashed (random) vertex placement. a random cut will cut roughly half the edges</li>
+</ul>
+</li>
+<li>vertex-cut
+<ul>
+<li>each edge is stored exactly once, changes to edge data do not need to be communicated</li>
+<li>changes to vertex must be copied to all the machines</li>
+<li>The simplest method to construct a vertex cut is to randomly assign edges to machines.</li>
+</ul>
+</li>
+</ul>
+<figure data-type="image" tabindex="1"><img src="https://tong-hao.github.io/post-images/%E8%AE%BA%E6%96%87_powergraph/0ef7ce279dc05b87555cc316c0e6468b735a67f6.webp" alt="" loading="lazy"></figure>
+<p>edge-cut: five ghost vertices and all edge data being replicated<br>
+vertex-cut: three-way vertex-cut of a graph yielding only 2 mirrors</p>
+<h3 id="42-greedy-vertex-cuts">4.2 Greedy Vertex-Cuts</h3>
+<ul>
+<li>Case 1: If A(u) and A(v) intersect, then the edge should be assigned to a machine in the intersection.</li>
+<li>Case 2: If A(u) and A(v) are not empty and do not intersect, then the edge should be assigned to one of the machines from the vertex with the most unassigned edges.</li>
+<li>Case 3: If only one of the two vertices has been assigned, then choose a machine from the assigned vertex.</li>
+<li>Case 4: If neither vertex has been assigned, then assign the edge to the least loaded machine.</li>
+</ul>
+
+            </div>
+            
+              <div class="tag-container">
+                
+                  <a href="https://tong-hao.github.io/graph-computer/" class="tag">
+                    图计算
+                  </a>
+                
+                  <a href="https://tong-hao.github.io/paper/" class="tag">
+                    论文
+                  </a>
+                
+              </div>
+            
+            
+              <div class="next-post">
+                <div class="next">下一篇</div>
+                <a href="https://tong-hao.github.io/lun-wen-_percolator/">
+                  <h3 class="post-title">
+                    论文_percolator
+                  </h3>
+                </a>
+              </div>
+            
+
+            
+              
+                <div id="gitalk-container" data-aos="fade-in"></div>
+              
+
+              
+            
+
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <script src="https://unpkg.com/aos@next/dist/aos.js"></script>
+<script type="application/javascript">
+
+AOS.init();
+
+var app = new Vue({
+  el: '#app',
+  data: {
+    menuVisible: false,
+  },
+})
+
+</script>
+
+
+  <script src="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.5.1/build/highlight.min.js"></script>
+  <script>
+    hljs.initHighlightingOnLoad()
+  </script>
+
+
+
+
+  
+    <script src="https://unpkg.com/gitalk/dist/gitalk.min.js"></script>
+    <script>
+
+      var gitalk = new Gitalk({
+        clientID: 'Iv23lit3WMjXHUkoxS5B',
+        clientSecret: '2654edec437559b9b027d9699017207fdb229659',
+        repo: 'tong-hao.github.io',
+        owner: 'tong-hao',
+        admin: ['tong-hao'],
+        id: (location.pathname).substring(0, 49),      // Ensure uniqueness and length less than 50
+        distractionFreeMode: false  // Facebook-like distraction free mode
+      })
+
+      gitalk.render('gitalk-container')
+
+    </script>
+  
+
+  
+
+
+
+
+  </body>
+</html>
