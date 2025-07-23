@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" >
+
+<title> pg-Buffer Manager的结构 | Caton Blog</title>
+
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="shortcut icon" href="https://tong-hao.github.io/favicon.ico?v=1753232818344">
+<link rel="stylesheet" href="https://tong-hao.github.io/styles/main.css">
+
+
+  
+    <link rel="stylesheet" href="https://unpkg.com/gitalk/dist/gitalk.css" />
+  
+
+  
+
+
+<link rel="stylesheet" href="https://unpkg.com/aos@next/dist/aos.css" />
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+
+
+
+    <meta name="description" content="如何存储的？
+
+
+buffer manager是由buffer table、buffer descriptors、buffer pool三个组成的。
+buffer pool是一个数组，每个位置用buffer_id标识，每个位置存放一个pag..." />
+    <meta name="keywords" content="postgresql" />
+  </head>
+  <body>
+    <div id="app" class="main">
+
+      <div class="sidebar" :class="{ 'full-height': menuVisible }">
+  <div class="top-container" data-aos="fade-right">
+    <div class="top-header-container">
+      <a class="site-title-container" href="https://tong-hao.github.io">
+        <img src="https://tong-hao.github.io/images/avatar.png?v=1753232818344" class="site-logo">
+        <h1 class="site-title">Caton Blog</h1>
+      </a>
+      <div class="menu-btn" @click="menuVisible = !menuVisible">
+        <div class="line"></div>
+      </div>
+    </div>
+    <div>
+      
+        
+          <a href="/" class="site-nav">
+            首页
+          </a>
+        
+      
+        
+          <a href="/archives" class="site-nav">
+            归档
+          </a>
+        
+      
+        
+          <a href="/tags" class="site-nav">
+            标签
+          </a>
+        
+      
+        
+          <a href="/about" class="site-nav">
+            关于
+          </a>
+        
+      
+        
+          <a href="/doris" class="site-nav">
+            #doris
+          </a>
+        
+      
+        
+          <a href="/pg" class="site-nav">
+            #postgresql
+          </a>
+        
+      
+        
+          <a href="/db" class="site-nav">
+            #数据库内核
+          </a>
+        
+      
+        
+          <a href="/graph-computer/" class="site-nav">
+            #图计算
+          </a>
+        
+      
+        
+          <a href="/graph-db" class="site-nav">
+            #图数据库
+          </a>
+        
+      
+        
+          <a href="/creation" class="site-nav">
+            #个人作品
+          </a>
+        
+      
+    </div>
+  </div>
+  <div class="bottom-container" data-aos="flip-up" data-aos-offset="0">
+    <div class="social-container">
+      
+        
+          <a class="social-link" href="https://github.com/tong-hao" target="_blank">
+            <i class="fab fa-github"></i>
+          </a>
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    </div>
+    <div class="site-description">
+      ✍️一个专注于数据库的博客
+    </div>
+    <div class="site-footer">
+       | <a class="rss" href="https://tong-hao.github.io/atom.xml" target="_blank">RSS</a>
+    </div>
+  </div>
+</div>
+
+
+      <div class="main-container">
+        <div class="content-container" data-aos="fade-up">
+          <div class="post-detail">
+            <h2 class="post-title"> pg-Buffer Manager的结构</h2>
+            <div class="post-date">2024-06-11</div>
+            
+            <div class="post-content" v-pre>
+              <h2 id="如何存储的">如何存储的？</h2>
+<figure data-type="image" tabindex="1"><img src="https://tong-hao.github.io/post-images/1718074626926.webp" alt="" loading="lazy"></figure>
+<ul>
+<li>buffer manager是由buffer table、buffer descriptors、buffer pool三个组成的。</li>
+<li>buffer pool是一个数组，每个位置用buffer_id标识，每个位置存放一个page。在buffer pool中是通过buffer_id获取page对应的buffer的。</li>
+<li>buffer descriptors与buffer pool是一一对应的，存储的是page的metadata</li>
+<li>buffer table是一个hash表，存储的是buffer_tag与buffer_id的映射</li>
+</ul>
+<h2 id="buffer-table">buffer table</h2>
+<p>buffer table分为hash函数、hash桶、数据条目<br>
+<img src="https://tong-hao.github.io/post-images/1718074658662.webp" alt="" loading="lazy"></p>
+<ul>
+<li>buffer_tag 经过hash函数可以得到一个slot位置</li>
+<li>data entries 是一个链表</li>
+<li>每个data entry包含：buffer_tag、buffer_id</li>
+</ul>
+<p>hash函数的实现：<br>
+<code>uint32 bucket_slot = calc_bucket(unsigned hash(BufferTag buffer_tag), uint32 bucket_size)</code></p>
+<h2 id="buffer-descriptor">Buffer Descriptor</h2>
+<pre><code class="language-c">typedef struct BufferDesc{
+// ID of page contained in buffer
+BufferTag       tag;
+// buffer's index number (from 0)
+int             buf_id;
+// state of the tag, containing flags, refcount and usagecount
+pg_atomic_uint32 state;
+// backend of pin-count waiter
+int wait_backend_pgprocno;
+// link in freelist chain
+int freeNext;   
+// to lock access to buffer contents
+LWLock content_lock;
+} BufferDesc;
+</code></pre>
+<ul>
+<li>tag</li>
+<li>buf_id 用于标识</li>
+<li>state 状态
+<ul>
+<li>Empty：当slot没有存储page时</li>
+<li>Pinned：slot存储了page，并且正在访问该page</li>
+<li>Unpinned：slot存储了page，没有访问该page</li>
+</ul>
+</li>
+<li>wait_backend_pgprocno</li>
+<li>freeNext 指向下一个BufferDesc</li>
+<li>content_lock 锁，用于控制page的访问</li>
+</ul>
+
+            </div>
+            
+              <div class="tag-container">
+                
+                  <a href="https://tong-hao.github.io/pg/" class="tag">
+                    postgresql
+                  </a>
+                
+              </div>
+            
+            
+              <div class="next-post">
+                <div class="next">下一篇</div>
+                <a href="https://tong-hao.github.io/0jKuhGUNs/">
+                  <h3 class="post-title">
+                    pg-Index-Only Scan
+                  </h3>
+                </a>
+              </div>
+            
+
+            
+              
+                <div id="gitalk-container" data-aos="fade-in"></div>
+              
+
+              
+            
+
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <script src="https://unpkg.com/aos@next/dist/aos.js"></script>
+<script type="application/javascript">
+
+AOS.init();
+
+var app = new Vue({
+  el: '#app',
+  data: {
+    menuVisible: false,
+  },
+})
+
+</script>
+
+
+  <script src="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.5.1/build/highlight.min.js"></script>
+  <script>
+    hljs.initHighlightingOnLoad()
+  </script>
+
+
+
+
+  
+    <script src="https://unpkg.com/gitalk/dist/gitalk.min.js"></script>
+    <script>
+
+      var gitalk = new Gitalk({
+        clientID: 'Ov23lieprxymzcVgZ0O1',
+        clientSecret: 'a8031fbd8318b584d517fd25242e7c8bdaf1c896',
+        repo: 'tong-hao.github.io',
+        owner: 'tong-hao',
+        admin: ['tong-hao'],
+        id: (location.pathname).substring(0, 49),      // Ensure uniqueness and length less than 50
+        distractionFreeMode: false  // Facebook-like distraction free mode
+      })
+
+      gitalk.render('gitalk-container')
+
+    </script>
+  
+
+  
+
+
+
+
+  </body>
+</html>

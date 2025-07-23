@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" >
+
+<title>miniob | Caton Blog</title>
+
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="shortcut icon" href="https://tong-hao.github.io/favicon.ico?v=1753232818344">
+<link rel="stylesheet" href="https://tong-hao.github.io/styles/main.css">
+
+
+  
+    <link rel="stylesheet" href="https://unpkg.com/gitalk/dist/gitalk.css" />
+  
+
+  
+
+
+<link rel="stylesheet" href="https://unpkg.com/aos@next/dist/aos.css" />
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+
+
+
+    <meta name="description" content="miniob是ob的缩小版，适用于数据库入门的开发人员。
+代码结构
+
+src/obclient 客户端
+src/observer 服务端
+src/observer/storage/common
+
+元数据
+
+
+src/observer/sto..." />
+    <meta name="keywords" content="数据库" />
+  </head>
+  <body>
+    <div id="app" class="main">
+
+      <div class="sidebar" :class="{ 'full-height': menuVisible }">
+  <div class="top-container" data-aos="fade-right">
+    <div class="top-header-container">
+      <a class="site-title-container" href="https://tong-hao.github.io">
+        <img src="https://tong-hao.github.io/images/avatar.png?v=1753232818344" class="site-logo">
+        <h1 class="site-title">Caton Blog</h1>
+      </a>
+      <div class="menu-btn" @click="menuVisible = !menuVisible">
+        <div class="line"></div>
+      </div>
+    </div>
+    <div>
+      
+        
+          <a href="/" class="site-nav">
+            首页
+          </a>
+        
+      
+        
+          <a href="/archives" class="site-nav">
+            归档
+          </a>
+        
+      
+        
+          <a href="/tags" class="site-nav">
+            标签
+          </a>
+        
+      
+        
+          <a href="/about" class="site-nav">
+            关于
+          </a>
+        
+      
+        
+          <a href="/doris" class="site-nav">
+            #doris
+          </a>
+        
+      
+        
+          <a href="/pg" class="site-nav">
+            #postgresql
+          </a>
+        
+      
+        
+          <a href="/db" class="site-nav">
+            #数据库内核
+          </a>
+        
+      
+        
+          <a href="/graph-computer/" class="site-nav">
+            #图计算
+          </a>
+        
+      
+        
+          <a href="/graph-db" class="site-nav">
+            #图数据库
+          </a>
+        
+      
+        
+          <a href="/creation" class="site-nav">
+            #个人作品
+          </a>
+        
+      
+    </div>
+  </div>
+  <div class="bottom-container" data-aos="flip-up" data-aos-offset="0">
+    <div class="social-container">
+      
+        
+          <a class="social-link" href="https://github.com/tong-hao" target="_blank">
+            <i class="fab fa-github"></i>
+          </a>
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    </div>
+    <div class="site-description">
+      ✍️一个专注于数据库的博客
+    </div>
+    <div class="site-footer">
+       | <a class="rss" href="https://tong-hao.github.io/atom.xml" target="_blank">RSS</a>
+    </div>
+  </div>
+</div>
+
+
+      <div class="main-container">
+        <div class="content-container" data-aos="fade-up">
+          <div class="post-detail">
+            <h2 class="post-title">miniob</h2>
+            <div class="post-date">2024-06-01</div>
+            
+            <div class="post-content" v-pre>
+              <p>miniob是ob的缩小版，适用于数据库入门的开发人员。</p>
+<h2 id="代码结构">代码结构</h2>
+<ul>
+<li>src/obclient 客户端</li>
+<li>src/observer 服务端</li>
+<li>src/observer/storage/common
+<ul>
+<li>元数据</li>
+</ul>
+</li>
+<li>src/observer/storage/event</li>
+<li>src/observer/net
+<ul>
+<li>网络模块</li>
+<li>主要是Server类</li>
+</ul>
+</li>
+<li>src/observer/sql</li>
+<li>src/observer/sql/parser
+<ul>
+<li>SQL解析</li>
+<li>lex_sql.l是词法解析代码，</li>
+<li>yacc_sql.y是语法解析代码，</li>
+<li>parse_defs.h中包含了语法树中各个数据结构。</li>
+</ul>
+</li>
+<li>src/observer/sql/executor/</li>
+<li>src/observer/storage 存储层</li>
+</ul>
+<h2 id="编译运行">编译&amp;运行</h2>
+<p>编译：</p>
+<pre><code>build.sh init //第三方库
+build.sh //编译miniob
+</code></pre>
+<p>运行server:</p>
+<pre><code>observer -f observer.ini -p 6789
+</code></pre>
+<p>运行客户端：</p>
+<pre><code>obclient -p 6789
+</code></pre>
+<h2 id="sql执行过程">sql执行过程</h2>
+<ul>
+<li>Threadpool::run_thread
+<ul>
+<li>SessionStage::handle_event
+<ul>
+<li>SessionStage::handle_request
+<ul>
+<li>SessionStage::handle_sql
+<ul>
+<li>QueryCacheStage::handle_request</li>
+<li>ParseStage::handle_request
+<ul>
+<li>parse
+<ul>
+<li>sql_parse</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>ResolveStage::handle_request
+<ul>
+<li>Session::get_current_db</li>
+<li>Stmt::create_stmt</li>
+</ul>
+</li>
+<li>OptimizeStage::handle_request
+<ul>
+<li>OptimizeStage::create_logical_plan //生成逻辑计划
+<ul>
+<li>LogicalPlanGenerator::create
+<ul>
+<li>LogicalPlanGenerator::create_plan</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>OptimizeStage::rewrite</li>
+<li>OptimizeStage::optimize</li>
+<li>OptimizeStage::generate_physical_plan //生成物理计划
+<ul>
+<li>PhysicalPlanGenerator::create</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>ExecuteStage::handle_request
+<ul>
+<li>ExecuteStage::handle_request_with_physical_operator</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<h2 id="参考资料">参考资料</h2>
+<ul>
+<li>《数据库系统实现》</li>
+<li>《数据库系统概念》</li>
+<li>《flex_bison》 flex/bison手册</li>
+<li>https://github.com/oceanbase/miniob</li>
+<li>https://oceanbase.github.io/miniob/dev-env/introduction.html</li>
+</ul>
+
+            </div>
+            
+              <div class="tag-container">
+                
+                  <a href="https://tong-hao.github.io/db/" class="tag">
+                    数据库
+                  </a>
+                
+              </div>
+            
+            
+              <div class="next-post">
+                <div class="next">下一篇</div>
+                <a href="https://tong-hao.github.io/UMxAgDeEn/">
+                  <h3 class="post-title">
+                    B+ 对比 LSM
+                  </h3>
+                </a>
+              </div>
+            
+
+            
+              
+                <div id="gitalk-container" data-aos="fade-in"></div>
+              
+
+              
+            
+
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <script src="https://unpkg.com/aos@next/dist/aos.js"></script>
+<script type="application/javascript">
+
+AOS.init();
+
+var app = new Vue({
+  el: '#app',
+  data: {
+    menuVisible: false,
+  },
+})
+
+</script>
+
+
+  <script src="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.5.1/build/highlight.min.js"></script>
+  <script>
+    hljs.initHighlightingOnLoad()
+  </script>
+
+
+
+
+  
+    <script src="https://unpkg.com/gitalk/dist/gitalk.min.js"></script>
+    <script>
+
+      var gitalk = new Gitalk({
+        clientID: 'Ov23lieprxymzcVgZ0O1',
+        clientSecret: 'a8031fbd8318b584d517fd25242e7c8bdaf1c896',
+        repo: 'tong-hao.github.io',
+        owner: 'tong-hao',
+        admin: ['tong-hao'],
+        id: (location.pathname).substring(0, 49),      // Ensure uniqueness and length less than 50
+        distractionFreeMode: false  // Facebook-like distraction free mode
+      })
+
+      gitalk.render('gitalk-container')
+
+    </script>
+  
+
+  
+
+
+
+
+  </body>
+</html>
