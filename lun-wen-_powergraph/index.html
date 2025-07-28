@@ -1,0 +1,384 @@
+<html>
+  <head>
+    <meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>论文_powergraph | Caton Blog</title>
+<link rel="shortcut icon" href="https://tong-hao.github.io/favicon.ico?v=1753690290554">
+<link href="https://cdn.jsdelivr.net/npm/remixicon@2.3.0/fonts/remixicon.css" rel="stylesheet">
+<link rel="stylesheet" href="https://tong-hao.github.io/styles/main.css">
+<link rel="alternate" type="application/atom+xml" title="论文_powergraph | Caton Blog - Atom Feed" href="https://tong-hao.github.io/atom.xml">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Droid+Serif:400,700">
+
+
+
+    <meta name="description" content="
+PowerGraph: Distributed Graph-Parallel Computation on Natural Graphs
+
+1. Graph-Parallel Abstractions
+1.1 pregel
+
+pregel..." />
+    <meta name="keywords" content="图计算,论文" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+    <script src="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.5.1/build/highlight.min.js"></script>
+  </head>
+  <body>
+    <div class="main">
+      <div class="main-content">
+        <div class="site-header">
+  <a href="https://tong-hao.github.io">
+  <img class="avatar" src="https://tong-hao.github.io/images/avatar.png?v=1753690290554" alt="">
+  </a>
+  <h1 class="site-title">
+    Caton Blog
+  </h1>
+  <p class="site-description">
+    ✍️一个专注于数据库的博客
+  </p>
+  <div class="menu-container">
+    
+      
+        <a href="/" class="menu">
+          首页
+        </a>
+      
+    
+      
+        <a href="/about" class="menu">
+          关于
+        </a>
+      
+    
+      
+        <a href="/tags" class="menu">
+          标签
+        </a>
+      
+    
+      
+        <a href="/pg" class="menu">
+          #pg
+        </a>
+      
+    
+      
+        <a href="/db" class="menu">
+          #数据库内核
+        </a>
+      
+    
+      
+        <a href="/graph-db" class="menu">
+          #图数据库
+        </a>
+      
+    
+      
+        <a href="/creation" class="menu">
+          #个人作品
+        </a>
+      
+    
+      
+        <a href="/cpp" class="menu">
+          #c++
+        </a>
+      
+    
+  </div>
+  <div class="social-container">
+    
+      
+        <a href="https://github.com/tong-hao" target="_blank">
+          <i class="ri-github-line"></i>
+        </a>
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+  </div>
+</div>
+
+        <div class="post-detail">
+          <article class="post">
+            <h2 class="post-title">
+              论文_powergraph
+            </h2>
+            <div class="post-info">
+              <span>
+                2024-06-01
+              </span>
+              <span>
+                3 min read
+              </span>
+              
+                <a href="https://tong-hao.github.io/graph-computer/" class="post-tag">
+                  # 图计算
+                </a>
+              
+                <a href="https://tong-hao.github.io/paper/" class="post-tag">
+                  # 论文
+                </a>
+              
+            </div>
+            
+            <div class="post-content-wrapper">
+              <div class="post-content" v-pre>
+                <blockquote>
+<p>PowerGraph: Distributed Graph-Parallel Computation on Natural Graphs</p>
+</blockquote>
+<h2 id="1-graph-parallel-abstractions">1. Graph-Parallel Abstractions</h2>
+<h3 id="11-pregel">1.1 pregel</h3>
+<ul>
+<li>pregel is a bulk synchronous message passing abstraction</li>
+<li>vertex-programs</li>
+<li>super-step</li>
+<li>combiner</li>
+</ul>
+<h3 id="12-graphlab">1.2 graphlab</h3>
+<ul>
+<li>GraphLab [29] is an asynchronous distributed shared- memory abstraction</li>
+<li>vertex-programs</li>
+</ul>
+<h3 id="13-powergraph">1.3 powergraph</h3>
+<ul>
+<li>GAS: Gather, Apply, and Scatter</li>
+</ul>
+<h2 id="2-challenges-of-natural-graphs">2. Challenges of Natural Graphs</h2>
+<h3 id="21-skewed-power-law-degree-distribution">2.1 skewed power-law degree distribution</h3>
+<ul>
+<li>most vertices have relatively few neighbors while a few have many neighbors</li>
+<li>公式：<img src="https://tong-hao.github.io/post-images/%E8%AE%BA%E6%96%87_powergraph/624e78b6dc63b3577a1c98d7167a0a31f411a794.webp" alt="image-20210618110704064" loading="lazy">
+<ul>
+<li>Higher α im- plies that the graph has lower density</li>
+<li>As α decreases, the graph density and number of high degree vertices increases.</li>
+<li>Most natural graphs. α ≈ 2</li>
+</ul>
+</li>
+</ul>
+<h3 id="22-challenges">2.2 challenges</h3>
+<ul>
+<li>work balance
+<ul>
+<li>Gather and Scatter phases is linear in the degree</li>
+</ul>
+</li>
+<li>partitioning
+<ul>
+<li>to minimize communication</li>
+<li>pregel and graphlab uses hash-based (random). that has poor locality.</li>
+</ul>
+</li>
+<li>communication
+<ul>
+<li>natural-graphs leads to communication asymmetry and consequently bottlenecks</li>
+</ul>
+</li>
+<li>storage
+<ul>
+<li>each vertex requires memory linear in its degree</li>
+<li>high-degree vertices can exceed the memory capacity of a single machine</li>
+</ul>
+</li>
+<li>computation
+<ul>
+<li>multiple vertex-programs may execute in parallel</li>
+<li>but not parallelize within individual vertex-programs</li>
+</ul>
+</li>
+</ul>
+<h2 id="3-powergraph-abstraction">3. PowerGraph Abstraction</h2>
+<h3 id="31-gas-vertex-programs">3.1 GAS Vertex-Programs</h3>
+<ul>
+<li>GASVertexProgram interface
+<ul>
+<li>gather, sum, apply, and scatter functions</li>
+</ul>
+</li>
+<li>[active vertexs] --gather--&gt; [au] --apply--&gt; [Du] --scatter--&gt; [D(u,v)]</li>
+<li>gather_nbrs: none, in, out, or all</li>
+<li>scatter nbrs</li>
+</ul>
+<h3 id="32-delta-caching">3.2 Delta Caching</h3>
+<ul>
+<li>scatter function can optionally return an additional ∆a</li>
+<li>If ∆a is not returned, then the neighbor's cached av is cleared</li>
+<li>∆a is used to dynamically update the cached accumulator av for the adjacent vertex</li>
+</ul>
+<figure>
+<img
+src="file:///Users/haotong/Documents/Gridea/post-images/%E8%AE%BA%E6%96%87_powergraph/3456cb13db27068e1ad7524a4ad0202bd6ec9599.webp"
+alt="image-20210618112409854" />
+<figcaption aria-hidden="true">image-20210618112409854</figcaption>
+</figure>
+<h3 id="33-initiating-future-computation">3.3 Initiating Future Computation</h3>
+<ul>
+<li>calling Activate(v) or Activate all()</li>
+<li>both synchronously and asynchronously</li>
+</ul>
+<h2 id="4-distributed-graph-placement">4. Distributed Graph Placement</h2>
+<h3 id="41-edge-cut-vs-vertex-cut">4.1 edge-cut vs. vertex-cut</h3>
+<ul>
+<li>edge-cut
+<ul>
+<li>vertices are evenly assigned to machines</li>
+<li>edges spanning machines</li>
+<li>GraphLab and Pregel resort to hashed (random) vertex placement. a random cut will cut roughly half the edges</li>
+</ul>
+</li>
+<li>vertex-cut
+<ul>
+<li>each edge is stored exactly once, changes to edge data do not need to be communicated</li>
+<li>changes to vertex must be copied to all the machines</li>
+<li>The simplest method to construct a vertex cut is to randomly assign edges to machines.</li>
+</ul>
+</li>
+</ul>
+<figure data-type="image" tabindex="1"><img src="https://tong-hao.github.io/post-images/%E8%AE%BA%E6%96%87_powergraph/0ef7ce279dc05b87555cc316c0e6468b735a67f6.webp" alt="" loading="lazy"></figure>
+<p>edge-cut: five ghost vertices and all edge data being replicated<br>
+vertex-cut: three-way vertex-cut of a graph yielding only 2 mirrors</p>
+<h3 id="42-greedy-vertex-cuts">4.2 Greedy Vertex-Cuts</h3>
+<ul>
+<li>Case 1: If A(u) and A(v) intersect, then the edge should be assigned to a machine in the intersection.</li>
+<li>Case 2: If A(u) and A(v) are not empty and do not intersect, then the edge should be assigned to one of the machines from the vertex with the most unassigned edges.</li>
+<li>Case 3: If only one of the two vertices has been assigned, then choose a machine from the assigned vertex.</li>
+<li>Case 4: If neither vertex has been assigned, then assign the edge to the least loaded machine.</li>
+</ul>
+
+              </div>
+              <div class="toc-container">
+                <ul class="markdownIt-TOC">
+<li>
+<ul>
+<li><a href="#1-graph-parallel-abstractions">1. Graph-Parallel Abstractions</a>
+<ul>
+<li><a href="#11-pregel">1.1 pregel</a></li>
+<li><a href="#12-graphlab">1.2 graphlab</a></li>
+<li><a href="#13-powergraph">1.3 powergraph</a></li>
+</ul>
+</li>
+<li><a href="#2-challenges-of-natural-graphs">2. Challenges of Natural Graphs</a>
+<ul>
+<li><a href="#21-skewed-power-law-degree-distribution">2.1 skewed power-law degree distribution</a></li>
+<li><a href="#22-challenges">2.2 challenges</a></li>
+</ul>
+</li>
+<li><a href="#3-powergraph-abstraction">3. PowerGraph Abstraction</a>
+<ul>
+<li><a href="#31-gas-vertex-programs">3.1 GAS Vertex-Programs</a></li>
+<li><a href="#32-delta-caching">3.2 Delta Caching</a></li>
+<li><a href="#33-initiating-future-computation">3.3 Initiating Future Computation</a></li>
+</ul>
+</li>
+<li><a href="#4-distributed-graph-placement">4. Distributed Graph Placement</a>
+<ul>
+<li><a href="#41-edge-cut-vs-vertex-cut">4.1 edge-cut vs. vertex-cut</a></li>
+<li><a href="#42-greedy-vertex-cuts">4.2 Greedy Vertex-Cuts</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+              </div>
+            </div>
+          </article>
+        </div>
+
+        
+          <div class="next-post">
+            <div class="next">下一篇</div>
+            <a href="https://tong-hao.github.io/lun-wen-_percolator/">
+              <h3 class="post-title">
+                论文_percolator
+              </h3>
+            </a>
+          </div>
+        
+
+        
+          
+            <link rel="stylesheet" href="https://unpkg.com/gitalk/dist/gitalk.css">
+<script src="https://unpkg.com/gitalk/dist/gitalk.min.js"></script>
+
+<div id="gitalk-container"></div>
+
+<script>
+
+  var gitalk = new Gitalk({
+    clientID: 'Ov23lieprxymzcVgZ0O1',
+    clientSecret: 'a8031fbd8318b584d517fd25242e7c8bdaf1c896',
+    repo: 'tong-hao.github.io',
+    owner: 'tong-hao',
+    admin: ['tong-hao'],
+    id: (location.pathname).substring(0, 49),      // Ensure uniqueness and length less than 50
+    distractionFreeMode: false  // Facebook-like distraction free mode
+  })
+
+  gitalk.render('gitalk-container')
+
+</script>
+
+          
+
+          
+        
+
+        <div class="site-footer">
+  
+  <a class="rss" href="https://tong-hao.github.io/atom.xml" target="_blank">
+    <i class="ri-rss-line"></i> RSS
+  </a>
+</div>
+
+      </div>
+    </div>
+
+    <script>
+      hljs.initHighlightingOnLoad()
+
+      let mainNavLinks = document.querySelectorAll(".markdownIt-TOC a");
+
+      // This should probably be throttled.
+      // Especially because it triggers during smooth scrolling.
+      // https://lodash.com/docs/4.17.10#throttle
+      // You could do like...
+      // window.addEventListener("scroll", () => {
+      //    _.throttle(doThatStuff, 100);
+      // });
+      // Only not doing it here to keep this Pen dependency-free.
+
+      window.addEventListener("scroll", event => {
+        let fromTop = window.scrollY;
+
+        mainNavLinks.forEach((link, index) => {
+          let section = document.getElementById(decodeURI(link.hash).substring(1));
+          let nextSection = null
+          if (mainNavLinks[index + 1]) {
+            nextSection = document.getElementById(decodeURI(mainNavLinks[index + 1].hash).substring(1));
+          }
+          if (section.offsetTop <= fromTop) {
+            if (nextSection) {
+              if (nextSection.offsetTop > fromTop) {
+                link.classList.add("current");
+              } else {
+                link.classList.remove("current");    
+              }
+            } else {
+              link.classList.add("current");
+            }
+          } else {
+            link.classList.remove("current");
+          }
+        });
+      });
+
+    </script>
+  </body>
+</html>

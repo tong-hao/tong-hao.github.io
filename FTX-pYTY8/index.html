@@ -1,0 +1,266 @@
+<html>
+  <head>
+    <meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>pg-可见性检查规则 | Caton Blog</title>
+<link rel="shortcut icon" href="https://tong-hao.github.io/favicon.ico?v=1753690290554">
+<link href="https://cdn.jsdelivr.net/npm/remixicon@2.3.0/fonts/remixicon.css" rel="stylesheet">
+<link rel="stylesheet" href="https://tong-hao.github.io/styles/main.css">
+<link rel="alternate" type="application/atom+xml" title="pg-可见性检查规则 | Caton Blog - Atom Feed" href="https://tong-hao.github.io/atom.xml">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Droid+Serif:400,700">
+
+
+
+    <meta name="description" content="名词解释
+
+t_xmin 是执行插入时的事务ID
+Status(t_xmin) 是插入时的事务的状态
+t_xmax 是执行删除时的事务ID
+Status(t_xmax) 是删除时的事务的状态
+
+规则
+Rule 1:  If Status(t..." />
+    <meta name="keywords" content="postgresql" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+    <script src="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.5.1/build/highlight.min.js"></script>
+  </head>
+  <body>
+    <div class="main">
+      <div class="main-content">
+        <div class="site-header">
+  <a href="https://tong-hao.github.io">
+  <img class="avatar" src="https://tong-hao.github.io/images/avatar.png?v=1753690290554" alt="">
+  </a>
+  <h1 class="site-title">
+    Caton Blog
+  </h1>
+  <p class="site-description">
+    ✍️一个专注于数据库的博客
+  </p>
+  <div class="menu-container">
+    
+      
+        <a href="/" class="menu">
+          首页
+        </a>
+      
+    
+      
+        <a href="/about" class="menu">
+          关于
+        </a>
+      
+    
+      
+        <a href="/tags" class="menu">
+          标签
+        </a>
+      
+    
+      
+        <a href="/pg" class="menu">
+          #pg
+        </a>
+      
+    
+      
+        <a href="/db" class="menu">
+          #数据库内核
+        </a>
+      
+    
+      
+        <a href="/graph-db" class="menu">
+          #图数据库
+        </a>
+      
+    
+      
+        <a href="/creation" class="menu">
+          #个人作品
+        </a>
+      
+    
+      
+        <a href="/cpp" class="menu">
+          #c++
+        </a>
+      
+    
+  </div>
+  <div class="social-container">
+    
+      
+        <a href="https://github.com/tong-hao" target="_blank">
+          <i class="ri-github-line"></i>
+        </a>
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+  </div>
+</div>
+
+        <div class="post-detail">
+          <article class="post">
+            <h2 class="post-title">
+              pg-可见性检查规则
+            </h2>
+            <div class="post-info">
+              <span>
+                2024-06-03
+              </span>
+              <span>
+                3 min read
+              </span>
+              
+                <a href="https://tong-hao.github.io/pg/" class="post-tag">
+                  # postgresql
+                </a>
+              
+            </div>
+            
+            <div class="post-content-wrapper">
+              <div class="post-content" v-pre>
+                <h2 id="名词解释">名词解释</h2>
+<ul>
+<li>t_xmin 是执行插入时的事务ID</li>
+<li>Status(t_xmin) 是插入时的事务的状态</li>
+<li>t_xmax 是执行删除时的事务ID</li>
+<li>Status(t_xmax) 是删除时的事务的状态</li>
+</ul>
+<h2 id="规则">规则</h2>
+<p><strong>Rule 1:</strong>  If <code>Status(t_xmin) = ABORTED</code>  =&gt; Invisible<br>
+<strong>解释：</strong> 在执行插入记录的时候事务被撤消了，所以该记录是不可见。</p>
+<p><strong>Rule 2:</strong> If <code>Status(t_xmin) = IN_PROGRESS</code>  AND<code> t_xmin = current_txid</code>  AND <code>t_xmax = INVAILD</code> =&gt; Visible<br>
+<strong>解释：</strong> 如果当前事务正在执行插入，并且没有执行过删除，该条记录对于当前事务时可见的。</p>
+<p><strong>Rule 3:</strong> If <code>Status(t_xmin) = IN_PROGRESS</code>  AND<code> t_xmin = current_txid</code>  AND <code>t_xmax != INVAILD</code> =&gt; Invisible<br>
+<strong>解释：</strong> 如果当前事务正在执行插入，并且执行过删除，该条记录在当前事务中是不可见。</p>
+<p><strong>Rule 4:</strong> If <code>Status(t_xmin) = IN_PROGRESS</code>  AND<code> t_xmin != current_txid</code>  =&gt; Invisible<br>
+<strong>解释：</strong> 事务A正在执行插入，事务B是看不到这条记录的。</p>
+<p><strong>Rule 5:</strong> If <code>Status(t_xmin) = COMMITTED</code>  AND <code>Snapshot(t_xmin) = active</code>  =&gt; Invisible<br>
+<strong>解释：</strong> 插入改记录的事务已经被commit，但是该记录的事务是活跃状态，所以不可见。</p>
+<p><strong>Rule 6:</strong> If <code>Status(t_xmin) = COMMITTED</code>  AND （<code>t_xmax = INVALID</code> OR <code>Status(t_xmax) = ABORTED</code>)  =&gt; Visible<br>
+<strong>解释：</strong> 插入改记录的事务已经被commit了，并且改记录没有删除过，或者记录对应的事务被回滚了，所以是可见的。</p>
+<p><strong>Rule 7:</strong> If <code>Status(t_xmin) = COMMITTED</code>  AND <code>Status(t_xmax) = IN_PROGRESS</code>  AND <code>t_xmax = current_txid</code>  =&gt; Invisible<br>
+<strong>解释：</strong> 插入改记录的事务已经被commit了，但是该记录正在被删除，并且删除的事务和当前是同一个事务，所以不可见。</p>
+<p><strong>Rule 8:</strong> If <code>Status(t_xmin) = COMMITTED</code>  AND <code>Status(t_xmax) = IN_PROGRESS</code>  AND <code>t_xmax != current_txid</code>  =&gt; Visible<br>
+<strong>解释：</strong> 插入改记录的事务已经被commit了，但是该记录正在被删除，并且删除的事务不是当前是同一个事务，所以可见。</p>
+<p><strong>Rule 9:</strong> If <code>Status(t_xmin) = COMMITTED</code>  AND <code>Status(t_xmax) = COMMITTED</code>  AND <code>Snapshot(t_xmax) = active</code>  =&gt; Visible<br>
+<strong>解释：</strong> 插入改记录的事务已经被commit了，删除该记录的事务也commit了，并且当前事务的snapshot显示删除该记录的事务是活跃的，所以可见。</p>
+<p><strong>Rule 10:</strong> If <code>Status(t_xmin) = COMMITTED</code>  AND <code>Status(t_xmax) = COMMITTED</code>  AND <code>Snapshot(t_xmax) != active</code>  =&gt; Invisible<br>
+<strong>解释：</strong> 插入改记录的事务已经被commit了，删除该记录的事务也commit了，并且当前事务的snapshot显示删除该记录的事务是非活跃的，所以不可见。</p>
+
+              </div>
+              <div class="toc-container">
+                <ul class="markdownIt-TOC">
+<li>
+<ul>
+<li><a href="#%E5%90%8D%E8%AF%8D%E8%A7%A3%E9%87%8A">名词解释</a></li>
+<li><a href="#%E8%A7%84%E5%88%99">规则</a></li>
+</ul>
+</li>
+</ul>
+
+              </div>
+            </div>
+          </article>
+        </div>
+
+        
+          <div class="next-post">
+            <div class="next">下一篇</div>
+            <a href="https://tong-hao.github.io/sJaPMLeBJ/">
+              <h3 class="post-title">
+                pg中的Index-Only Scan
+              </h3>
+            </a>
+          </div>
+        
+
+        
+          
+            <link rel="stylesheet" href="https://unpkg.com/gitalk/dist/gitalk.css">
+<script src="https://unpkg.com/gitalk/dist/gitalk.min.js"></script>
+
+<div id="gitalk-container"></div>
+
+<script>
+
+  var gitalk = new Gitalk({
+    clientID: 'Ov23lieprxymzcVgZ0O1',
+    clientSecret: 'a8031fbd8318b584d517fd25242e7c8bdaf1c896',
+    repo: 'tong-hao.github.io',
+    owner: 'tong-hao',
+    admin: ['tong-hao'],
+    id: (location.pathname).substring(0, 49),      // Ensure uniqueness and length less than 50
+    distractionFreeMode: false  // Facebook-like distraction free mode
+  })
+
+  gitalk.render('gitalk-container')
+
+</script>
+
+          
+
+          
+        
+
+        <div class="site-footer">
+  
+  <a class="rss" href="https://tong-hao.github.io/atom.xml" target="_blank">
+    <i class="ri-rss-line"></i> RSS
+  </a>
+</div>
+
+      </div>
+    </div>
+
+    <script>
+      hljs.initHighlightingOnLoad()
+
+      let mainNavLinks = document.querySelectorAll(".markdownIt-TOC a");
+
+      // This should probably be throttled.
+      // Especially because it triggers during smooth scrolling.
+      // https://lodash.com/docs/4.17.10#throttle
+      // You could do like...
+      // window.addEventListener("scroll", () => {
+      //    _.throttle(doThatStuff, 100);
+      // });
+      // Only not doing it here to keep this Pen dependency-free.
+
+      window.addEventListener("scroll", event => {
+        let fromTop = window.scrollY;
+
+        mainNavLinks.forEach((link, index) => {
+          let section = document.getElementById(decodeURI(link.hash).substring(1));
+          let nextSection = null
+          if (mainNavLinks[index + 1]) {
+            nextSection = document.getElementById(decodeURI(mainNavLinks[index + 1].hash).substring(1));
+          }
+          if (section.offsetTop <= fromTop) {
+            if (nextSection) {
+              if (nextSection.offsetTop > fromTop) {
+                link.classList.add("current");
+              } else {
+                link.classList.remove("current");    
+              }
+            } else {
+              link.classList.add("current");
+            }
+          } else {
+            link.classList.remove("current");
+          }
+        });
+      });
+
+    </script>
+  </body>
+</html>

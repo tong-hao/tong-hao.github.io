@@ -1,0 +1,342 @@
+<html>
+  <head>
+    <meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>图计算算法的个人理解【待补充】 | Caton Blog</title>
+<link rel="shortcut icon" href="https://tong-hao.github.io/favicon.ico?v=1753690290554">
+<link href="https://cdn.jsdelivr.net/npm/remixicon@2.3.0/fonts/remixicon.css" rel="stylesheet">
+<link rel="stylesheet" href="https://tong-hao.github.io/styles/main.css">
+<link rel="alternate" type="application/atom+xml" title="图计算算法的个人理解【待补充】 | Caton Blog - Atom Feed" href="https://tong-hao.github.io/atom.xml">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Droid+Serif:400,700">
+
+
+
+    <meta name="description" content="pagerank
+图结构：csc_s, pull
+初始化：
+每个点的rank值为 1/出度
+迭代：
+每个点统计它入边邻居的rank值之和
+更新每个点的rank值为 = 1-阻尼系数 + 阻尼系数 * rank值之和
+结束：
+达到迭代次数
+每..." />
+    <meta name="keywords" content="图计算,算法" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+    <script src="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.5.1/build/highlight.min.js"></script>
+  </head>
+  <body>
+    <div class="main">
+      <div class="main-content">
+        <div class="site-header">
+  <a href="https://tong-hao.github.io">
+  <img class="avatar" src="https://tong-hao.github.io/images/avatar.png?v=1753690290554" alt="">
+  </a>
+  <h1 class="site-title">
+    Caton Blog
+  </h1>
+  <p class="site-description">
+    ✍️一个专注于数据库的博客
+  </p>
+  <div class="menu-container">
+    
+      
+        <a href="/" class="menu">
+          首页
+        </a>
+      
+    
+      
+        <a href="/about" class="menu">
+          关于
+        </a>
+      
+    
+      
+        <a href="/tags" class="menu">
+          标签
+        </a>
+      
+    
+      
+        <a href="/pg" class="menu">
+          #pg
+        </a>
+      
+    
+      
+        <a href="/db" class="menu">
+          #数据库内核
+        </a>
+      
+    
+      
+        <a href="/graph-db" class="menu">
+          #图数据库
+        </a>
+      
+    
+      
+        <a href="/creation" class="menu">
+          #个人作品
+        </a>
+      
+    
+      
+        <a href="/cpp" class="menu">
+          #c++
+        </a>
+      
+    
+  </div>
+  <div class="social-container">
+    
+      
+        <a href="https://github.com/tong-hao" target="_blank">
+          <i class="ri-github-line"></i>
+        </a>
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+  </div>
+</div>
+
+        <div class="post-detail">
+          <article class="post">
+            <h2 class="post-title">
+              图计算算法的个人理解【待补充】
+            </h2>
+            <div class="post-info">
+              <span>
+                2024-06-01
+              </span>
+              <span>
+                3 min read
+              </span>
+              
+                <a href="https://tong-hao.github.io/graph-computer/" class="post-tag">
+                  # 图计算
+                </a>
+              
+                <a href="https://tong-hao.github.io/algo/" class="post-tag">
+                  # 算法
+                </a>
+              
+            </div>
+            
+            <div class="post-content-wrapper">
+              <div class="post-content" v-pre>
+                <h2 id="pagerank">pagerank</h2>
+<p>图结构：csc_s, pull</p>
+<p>初始化：<br>
+每个点的rank值为 1/出度</p>
+<p>迭代：<br>
+每个点统计它入边邻居的rank值之和<br>
+更新每个点的rank值为 = 1-阻尼系数 + 阻尼系数 * rank值之和</p>
+<p>结束：<br>
+达到迭代次数<br>
+每个点的rank变化总和 &gt; eps</p>
+<p>补充：<br>
+阻尼系数为0.85<br>
+eps为0.001</p>
+<h2 id="wcc">WCC</h2>
+<p>图结构：csr_d, csc_s<br>
+支持 push+pull模式<br>
+什么情况下用push？什么情况下用pull？稠密图用pull，稀疏图用push，如果活跃边数量/总边数&gt;=0.05则是稠密图。</p>
+<p>初始化：每个点的Label为自己的顶点ID</p>
+<p>迭代：<br>
+1)每个点获取邻居的label，将自己的label改为邻居中label值最小的那个</p>
+<p>结束：不存在活跃点</p>
+<h2 id="lpa">LPA</h2>
+<p>图结构：csc_d，入边<br>
+<mark>csc_d理论上为push模式，但是并没有采用pull或push的方式执行算法，仅仅是通过遍历每个点邻居的方式执行算法的</mark>。</p>
+<p>初始化：每个点的Label为自己的顶点ID</p>
+<p>迭代：</p>
+<ol>
+<li>每个点获取邻居的label，将自己的label改为邻居中label最多那个</li>
+<li>如果最多的label有多个，有两种处理方式：随机、取最小label值</li>
+</ol>
+<p>结束：达到迭代次数</p>
+<h2 id="hanp">HANP</h2>
+<p>图结构：csc_d</p>
+<p>HANP是LPA的升级版，计算过程也与LPA完全相同。<br>
+不同的地方是，最多label的计算方式不同，LPA是通过累加的方式，而HANP是通过xxx公式。<br>
+HANP是有权重的，而LPA是没有权重的。<br>
+HANP有衰减因子</p>
+<h2 id="louvain">Louvain</h2>
+<p>图结构：csr_s 出边<br>
+<mark>原本csr_s是pull的方式的，但采用了broadcast_message</mark></p>
+<p>初始化：每个点的Label为自己的顶点ID</p>
+<p>迭代：<br>
+louvain是一个两层嵌套的迭代<br>
+1）内层迭代：每个节点获取邻居的label，计算自己加到邻居label后的受益，哪个受益大，就将自己的标签改为哪个<br>
+2）外层迭代：将相同label的点合并为一个点，不同label之间的关系作为边，构成新的图</p>
+<p>结束：达到迭代次数</p>
+<p>补充：</p>
+<h2 id="kcore">KCore</h2>
+<p>图结构：csr_s 出边</p>
+<p>计算：<br>
+参考论文《Distributed k-Core Decomposition》</p>
+<pre><code>int core; // 标识当前顶点的coreness
+int[] est; // 邻居的coreness
+bool changed; // 释放有
+
+</code></pre>
+<p>补充：<br>
+仅用于无向图</p>
+<h2 id="jaccard">Jaccard</h2>
+<p>用于比较两个顶点之间的相似度<br>
+图结构：csr_s 所有出边</p>
+<p>计算过程：<br>
+1）获取ids1顶点的邻居，并同步到所有计算节点<br>
+2）ids2与ids1任意两两做相似度计算</p>
+<pre><code>          A∩B          A∩B
+𝐽(a,b) = ——— = ——————
+          A∪B         A+B−A∩B
+
+a and b are vertices.
+A is the neighbours of a.
+B is the neighbours of b.
+</code></pre>
+<p>补充：<br>
+仅用于无向图</p>
+<h2 id="trianglecount">TriangleCount</h2>
+<p>图结构：csr_s 所有出边</p>
+<p>计算方式：<br>
+顶点A的邻居 与 顶点A的邻居的邻居 做交集，数量和是顶点A的三角形数量</p>
+<p>补充：<br>
+仅用于无向图</p>
+<h2 id="clusteringcoefficient">ClusteringCoefficient</h2>
+<p>图结构：csr_s 所有出边</p>
+<p>计算公式：<br>
+<code>2*三角形数量 / (邻居数量 * (邻居数量-1) )</code></p>
+<p>补充：<br>
+仅用于无向图</p>
+<h2 id="bnc">BNC</h2>
+<p>TODO：待补充</p>
+<h2 id="cnc">CNC</h2>
+<p>TODO：待补充</p>
+
+              </div>
+              <div class="toc-container">
+                <ul class="markdownIt-TOC">
+<li>
+<ul>
+<li><a href="#pagerank">pagerank</a></li>
+<li><a href="#wcc">WCC</a></li>
+<li><a href="#lpa">LPA</a></li>
+<li><a href="#hanp">HANP</a></li>
+<li><a href="#louvain">Louvain</a></li>
+<li><a href="#kcore">KCore</a></li>
+<li><a href="#jaccard">Jaccard</a></li>
+<li><a href="#trianglecount">TriangleCount</a></li>
+<li><a href="#clusteringcoefficient">ClusteringCoefficient</a></li>
+<li><a href="#bnc">BNC</a></li>
+<li><a href="#cnc">CNC</a></li>
+</ul>
+</li>
+</ul>
+
+              </div>
+            </div>
+          </article>
+        </div>
+
+        
+          <div class="next-post">
+            <div class="next">下一篇</div>
+            <a href="https://tong-hao.github.io/shu-ju-ku-zhong-de-join/">
+              <h3 class="post-title">
+                数据库中的Join
+              </h3>
+            </a>
+          </div>
+        
+
+        
+          
+            <link rel="stylesheet" href="https://unpkg.com/gitalk/dist/gitalk.css">
+<script src="https://unpkg.com/gitalk/dist/gitalk.min.js"></script>
+
+<div id="gitalk-container"></div>
+
+<script>
+
+  var gitalk = new Gitalk({
+    clientID: 'Ov23lieprxymzcVgZ0O1',
+    clientSecret: 'a8031fbd8318b584d517fd25242e7c8bdaf1c896',
+    repo: 'tong-hao.github.io',
+    owner: 'tong-hao',
+    admin: ['tong-hao'],
+    id: (location.pathname).substring(0, 49),      // Ensure uniqueness and length less than 50
+    distractionFreeMode: false  // Facebook-like distraction free mode
+  })
+
+  gitalk.render('gitalk-container')
+
+</script>
+
+          
+
+          
+        
+
+        <div class="site-footer">
+  
+  <a class="rss" href="https://tong-hao.github.io/atom.xml" target="_blank">
+    <i class="ri-rss-line"></i> RSS
+  </a>
+</div>
+
+      </div>
+    </div>
+
+    <script>
+      hljs.initHighlightingOnLoad()
+
+      let mainNavLinks = document.querySelectorAll(".markdownIt-TOC a");
+
+      // This should probably be throttled.
+      // Especially because it triggers during smooth scrolling.
+      // https://lodash.com/docs/4.17.10#throttle
+      // You could do like...
+      // window.addEventListener("scroll", () => {
+      //    _.throttle(doThatStuff, 100);
+      // });
+      // Only not doing it here to keep this Pen dependency-free.
+
+      window.addEventListener("scroll", event => {
+        let fromTop = window.scrollY;
+
+        mainNavLinks.forEach((link, index) => {
+          let section = document.getElementById(decodeURI(link.hash).substring(1));
+          let nextSection = null
+          if (mainNavLinks[index + 1]) {
+            nextSection = document.getElementById(decodeURI(mainNavLinks[index + 1].hash).substring(1));
+          }
+          if (section.offsetTop <= fromTop) {
+            if (nextSection) {
+              if (nextSection.offsetTop > fromTop) {
+                link.classList.add("current");
+              } else {
+                link.classList.remove("current");    
+              }
+            } else {
+              link.classList.add("current");
+            }
+          } else {
+            link.classList.remove("current");
+          }
+        });
+      });
+
+    </script>
+  </body>
+</html>

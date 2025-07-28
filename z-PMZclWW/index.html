@@ -1,0 +1,350 @@
+<html>
+  <head>
+    <meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>miniob | Caton Blog</title>
+<link rel="shortcut icon" href="https://tong-hao.github.io/favicon.ico?v=1753690290554">
+<link href="https://cdn.jsdelivr.net/npm/remixicon@2.3.0/fonts/remixicon.css" rel="stylesheet">
+<link rel="stylesheet" href="https://tong-hao.github.io/styles/main.css">
+<link rel="alternate" type="application/atom+xml" title="miniob | Caton Blog - Atom Feed" href="https://tong-hao.github.io/atom.xml">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Droid+Serif:400,700">
+
+
+
+    <meta name="description" content="miniob是ob的缩小版，适用于数据库入门的开发人员。
+代码结构
+
+src/obclient 客户端
+src/observer 服务端
+src/observer/storage/common
+
+元数据
+
+
+src/observer/sto..." />
+    <meta name="keywords" content="数据库" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+    <script src="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.5.1/build/highlight.min.js"></script>
+  </head>
+  <body>
+    <div class="main">
+      <div class="main-content">
+        <div class="site-header">
+  <a href="https://tong-hao.github.io">
+  <img class="avatar" src="https://tong-hao.github.io/images/avatar.png?v=1753690290554" alt="">
+  </a>
+  <h1 class="site-title">
+    Caton Blog
+  </h1>
+  <p class="site-description">
+    ✍️一个专注于数据库的博客
+  </p>
+  <div class="menu-container">
+    
+      
+        <a href="/" class="menu">
+          首页
+        </a>
+      
+    
+      
+        <a href="/about" class="menu">
+          关于
+        </a>
+      
+    
+      
+        <a href="/tags" class="menu">
+          标签
+        </a>
+      
+    
+      
+        <a href="/pg" class="menu">
+          #pg
+        </a>
+      
+    
+      
+        <a href="/db" class="menu">
+          #数据库内核
+        </a>
+      
+    
+      
+        <a href="/graph-db" class="menu">
+          #图数据库
+        </a>
+      
+    
+      
+        <a href="/creation" class="menu">
+          #个人作品
+        </a>
+      
+    
+      
+        <a href="/cpp" class="menu">
+          #c++
+        </a>
+      
+    
+  </div>
+  <div class="social-container">
+    
+      
+        <a href="https://github.com/tong-hao" target="_blank">
+          <i class="ri-github-line"></i>
+        </a>
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+  </div>
+</div>
+
+        <div class="post-detail">
+          <article class="post">
+            <h2 class="post-title">
+              miniob
+            </h2>
+            <div class="post-info">
+              <span>
+                2024-06-01
+              </span>
+              <span>
+                2 min read
+              </span>
+              
+                <a href="https://tong-hao.github.io/db/" class="post-tag">
+                  # 数据库
+                </a>
+              
+            </div>
+            
+            <div class="post-content-wrapper">
+              <div class="post-content" v-pre>
+                <p>miniob是ob的缩小版，适用于数据库入门的开发人员。</p>
+<h2 id="代码结构">代码结构</h2>
+<ul>
+<li>src/obclient 客户端</li>
+<li>src/observer 服务端</li>
+<li>src/observer/storage/common
+<ul>
+<li>元数据</li>
+</ul>
+</li>
+<li>src/observer/storage/event</li>
+<li>src/observer/net
+<ul>
+<li>网络模块</li>
+<li>主要是Server类</li>
+</ul>
+</li>
+<li>src/observer/sql</li>
+<li>src/observer/sql/parser
+<ul>
+<li>SQL解析</li>
+<li>lex_sql.l是词法解析代码，</li>
+<li>yacc_sql.y是语法解析代码，</li>
+<li>parse_defs.h中包含了语法树中各个数据结构。</li>
+</ul>
+</li>
+<li>src/observer/sql/executor/</li>
+<li>src/observer/storage 存储层</li>
+</ul>
+<h2 id="编译运行">编译&amp;运行</h2>
+<p>编译：</p>
+<pre><code>build.sh init //第三方库
+build.sh //编译miniob
+</code></pre>
+<p>运行server:</p>
+<pre><code>observer -f observer.ini -p 6789
+</code></pre>
+<p>运行客户端：</p>
+<pre><code>obclient -p 6789
+</code></pre>
+<h2 id="sql执行过程">sql执行过程</h2>
+<ul>
+<li>Threadpool::run_thread
+<ul>
+<li>SessionStage::handle_event
+<ul>
+<li>SessionStage::handle_request
+<ul>
+<li>SessionStage::handle_sql
+<ul>
+<li>QueryCacheStage::handle_request</li>
+<li>ParseStage::handle_request
+<ul>
+<li>parse
+<ul>
+<li>sql_parse</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>ResolveStage::handle_request
+<ul>
+<li>Session::get_current_db</li>
+<li>Stmt::create_stmt</li>
+</ul>
+</li>
+<li>OptimizeStage::handle_request
+<ul>
+<li>OptimizeStage::create_logical_plan //生成逻辑计划
+<ul>
+<li>LogicalPlanGenerator::create
+<ul>
+<li>LogicalPlanGenerator::create_plan</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>OptimizeStage::rewrite</li>
+<li>OptimizeStage::optimize</li>
+<li>OptimizeStage::generate_physical_plan //生成物理计划
+<ul>
+<li>PhysicalPlanGenerator::create</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>ExecuteStage::handle_request
+<ul>
+<li>ExecuteStage::handle_request_with_physical_operator</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<h2 id="参考资料">参考资料</h2>
+<ul>
+<li>《数据库系统实现》</li>
+<li>《数据库系统概念》</li>
+<li>《flex_bison》 flex/bison手册</li>
+<li>https://github.com/oceanbase/miniob</li>
+<li>https://oceanbase.github.io/miniob/dev-env/introduction.html</li>
+</ul>
+
+              </div>
+              <div class="toc-container">
+                <ul class="markdownIt-TOC">
+<li>
+<ul>
+<li><a href="#%E4%BB%A3%E7%A0%81%E7%BB%93%E6%9E%84">代码结构</a></li>
+<li><a href="#%E7%BC%96%E8%AF%91%E8%BF%90%E8%A1%8C">编译&amp;运行</a></li>
+<li><a href="#sql%E6%89%A7%E8%A1%8C%E8%BF%87%E7%A8%8B">sql执行过程</a></li>
+<li><a href="#%E5%8F%82%E8%80%83%E8%B5%84%E6%96%99">参考资料</a></li>
+</ul>
+</li>
+</ul>
+
+              </div>
+            </div>
+          </article>
+        </div>
+
+        
+          <div class="next-post">
+            <div class="next">下一篇</div>
+            <a href="https://tong-hao.github.io/UMxAgDeEn/">
+              <h3 class="post-title">
+                B+ 对比 LSM
+              </h3>
+            </a>
+          </div>
+        
+
+        
+          
+            <link rel="stylesheet" href="https://unpkg.com/gitalk/dist/gitalk.css">
+<script src="https://unpkg.com/gitalk/dist/gitalk.min.js"></script>
+
+<div id="gitalk-container"></div>
+
+<script>
+
+  var gitalk = new Gitalk({
+    clientID: 'Ov23lieprxymzcVgZ0O1',
+    clientSecret: 'a8031fbd8318b584d517fd25242e7c8bdaf1c896',
+    repo: 'tong-hao.github.io',
+    owner: 'tong-hao',
+    admin: ['tong-hao'],
+    id: (location.pathname).substring(0, 49),      // Ensure uniqueness and length less than 50
+    distractionFreeMode: false  // Facebook-like distraction free mode
+  })
+
+  gitalk.render('gitalk-container')
+
+</script>
+
+          
+
+          
+        
+
+        <div class="site-footer">
+  
+  <a class="rss" href="https://tong-hao.github.io/atom.xml" target="_blank">
+    <i class="ri-rss-line"></i> RSS
+  </a>
+</div>
+
+      </div>
+    </div>
+
+    <script>
+      hljs.initHighlightingOnLoad()
+
+      let mainNavLinks = document.querySelectorAll(".markdownIt-TOC a");
+
+      // This should probably be throttled.
+      // Especially because it triggers during smooth scrolling.
+      // https://lodash.com/docs/4.17.10#throttle
+      // You could do like...
+      // window.addEventListener("scroll", () => {
+      //    _.throttle(doThatStuff, 100);
+      // });
+      // Only not doing it here to keep this Pen dependency-free.
+
+      window.addEventListener("scroll", event => {
+        let fromTop = window.scrollY;
+
+        mainNavLinks.forEach((link, index) => {
+          let section = document.getElementById(decodeURI(link.hash).substring(1));
+          let nextSection = null
+          if (mainNavLinks[index + 1]) {
+            nextSection = document.getElementById(decodeURI(mainNavLinks[index + 1].hash).substring(1));
+          }
+          if (section.offsetTop <= fromTop) {
+            if (nextSection) {
+              if (nextSection.offsetTop > fromTop) {
+                link.classList.add("current");
+              } else {
+                link.classList.remove("current");    
+              }
+            } else {
+              link.classList.add("current");
+            }
+          } else {
+            link.classList.remove("current");
+          }
+        });
+      });
+
+    </script>
+  </body>
+</html>

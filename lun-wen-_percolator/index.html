@@ -1,0 +1,320 @@
+<html>
+  <head>
+    <meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>论文_percolator | Caton Blog</title>
+<link rel="shortcut icon" href="https://tong-hao.github.io/favicon.ico?v=1753690290554">
+<link href="https://cdn.jsdelivr.net/npm/remixicon@2.3.0/fonts/remixicon.css" rel="stylesheet">
+<link rel="stylesheet" href="https://tong-hao.github.io/styles/main.css">
+<link rel="alternate" type="application/atom+xml" title="论文_percolator | Caton Blog - Atom Feed" href="https://tong-hao.github.io/atom.xml">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Droid+Serif:400,700">
+
+
+
+    <meta name="description" content="背景
+
+Percolator在google内部用于搜索页面的处理。由于传统的MapRedurce处理模型过于沉重，在处理小数据和大批量的计算时效率不高，所以发明了Percolator。
+Percolator相比MR，效率提升了50%。
+Pe..." />
+    <meta name="keywords" content="数据库,论文" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+    <script src="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.5.1/build/highlight.min.js"></script>
+  </head>
+  <body>
+    <div class="main">
+      <div class="main-content">
+        <div class="site-header">
+  <a href="https://tong-hao.github.io">
+  <img class="avatar" src="https://tong-hao.github.io/images/avatar.png?v=1753690290554" alt="">
+  </a>
+  <h1 class="site-title">
+    Caton Blog
+  </h1>
+  <p class="site-description">
+    ✍️一个专注于数据库的博客
+  </p>
+  <div class="menu-container">
+    
+      
+        <a href="/" class="menu">
+          首页
+        </a>
+      
+    
+      
+        <a href="/about" class="menu">
+          关于
+        </a>
+      
+    
+      
+        <a href="/tags" class="menu">
+          标签
+        </a>
+      
+    
+      
+        <a href="/pg" class="menu">
+          #pg
+        </a>
+      
+    
+      
+        <a href="/db" class="menu">
+          #数据库内核
+        </a>
+      
+    
+      
+        <a href="/graph-db" class="menu">
+          #图数据库
+        </a>
+      
+    
+      
+        <a href="/creation" class="menu">
+          #个人作品
+        </a>
+      
+    
+      
+        <a href="/cpp" class="menu">
+          #c++
+        </a>
+      
+    
+  </div>
+  <div class="social-container">
+    
+      
+        <a href="https://github.com/tong-hao" target="_blank">
+          <i class="ri-github-line"></i>
+        </a>
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+  </div>
+</div>
+
+        <div class="post-detail">
+          <article class="post">
+            <h2 class="post-title">
+              论文_percolator
+            </h2>
+            <div class="post-info">
+              <span>
+                2024-06-01
+              </span>
+              <span>
+                3 min read
+              </span>
+              
+                <a href="https://tong-hao.github.io/db/" class="post-tag">
+                  # 数据库
+                </a>
+              
+                <a href="https://tong-hao.github.io/paper/" class="post-tag">
+                  # 论文
+                </a>
+              
+            </div>
+            
+            <div class="post-content-wrapper">
+              <div class="post-content" v-pre>
+                <h2 id="背景">背景</h2>
+<ul>
+<li>Percolator在google内部用于搜索页面的处理。由于传统的MapRedurce处理模型过于沉重，在处理小数据和大批量的计算时效率不高，所以发明了Percolator。</li>
+<li>Percolator相比MR，效率提升了50%。</li>
+<li>Percolator提供ACID事务、提供observers（pieces of code）。</li>
+</ul>
+<h2 id="percolator架构">Percolator架构</h2>
+<ul>
+<li>a Percolator worker<br>
+<code>invokes observers to read/write Bigtable.</code></li>
+<li>a Bigtable<br>
+<code>consists of a collection of tablet servers. A table store a collection of SST-files.</code></li>
+<li>a GFS chunkserver</li>
+<li>a timestamp oracle</li>
+<li>a lightweight lock service</li>
+</ul>
+<h2 id="percolator存储格式">Percolator存储格式</h2>
+<pre><code>Column Use
+-------------
+c:lock   An uncommitted transaction is writing this cell; contains the location of primary lock 
+c:write  Committed data present; stores the Bigtable timestamp of the data
+c:data   Stores the data itself
+c:notify  Hint: observers may need to run
+c:ack_O   Observer “O” has run ; stores start timestamp of successful last run
+
+</code></pre>
+<ul>
+<li>lock_cf: {key,start_ts}=&gt;{primary_key,locktype}</li>
+<li>data_cf: {key,start_ts}=&gt;{value}</li>
+<li>write_cf: {key,commit_ts}=&gt;{start_ts}</li>
+</ul>
+<h2 id="percolator两阶段提交">Percolator两阶段提交</h2>
+<p>阶段一：</p>
+<ol>
+<li>从timestamp oracle服务中获取start_ts</li>
+<li>随机选取一个key作为primary, 其他的为secondary</li>
+<li>write-write锁检查：从write_cf中读取当前key的数据，如果 commit_ts &gt;= strat_ts 则说明事务存在冲突，返回WriteConflict错误；</li>
+<li>key_cf检查：如果存在数据，返回KeyIsLock的错误</li>
+<li>写数据<br>
+key_cf:<br>
+lock_cf:<br>
+data_cf:</li>
+</ol>
+<p>阶段二：<br>
+注意：一旦primary节点提交成功后，整个事务就算提交成功了。</p>
+<ol>
+<li>向primary key所在的节点发请求
+<ul>
+<li>先检查lock_cf中的数据 {primary_key,start_ts}</li>
+<li>写入write_cf {primary_key,commit_ts}=&gt;{start_ts}</li>
+<li>删除lock_cf</li>
+</ul>
+</li>
+<li>向secondary key所在的节点发送请求
+<ul>
+<li>先检查lock_cf中的数据 {当前key,start_ts}</li>
+<li>写入write_cf {当前key,commit_ts}=&gt;{start_ts}</li>
+<li>删除lock_cf</li>
+</ul>
+</li>
+</ol>
+<h2 id="percolator优缺点">Percolator优缺点</h2>
+<h3 id="缺点">缺点</h3>
+<ul>
+<li>读取性能不好 <code>因为写的时候先写primary 再写secondary。 如果写secondary时间长，会导致读等待。</code></li>
+<li>写性能问题 <code>写的时候要写多列，并且需要两阶段提交；如果commit阶段出了问题，会造成其他参与者不能写入锁，需要依赖锁清理机制。</code></li>
+</ul>
+<h2 id="参考">参考</h2>
+<ul>
+<li>论文《Large-scale Incremental Processing Using Distributed Transactions and Notifications》</li>
+<li>《Google Percolator事务》 https://zhuanlan.zhihu.com/p/53197633</li>
+<li>《Google Percolator 事务模型的利弊分析》 https://zhuanlan.zhihu.com/p/59115828</li>
+<li>《为什么 percolator 的事务两阶段提交不需要 Coordinator？》 https://www.zhihu.com/question/300050882/answer/518833781</li>
+</ul>
+
+              </div>
+              <div class="toc-container">
+                <ul class="markdownIt-TOC">
+<li>
+<ul>
+<li><a href="#%E8%83%8C%E6%99%AF">背景</a></li>
+<li><a href="#percolator%E6%9E%B6%E6%9E%84">Percolator架构</a></li>
+<li><a href="#percolator%E5%AD%98%E5%82%A8%E6%A0%BC%E5%BC%8F">Percolator存储格式</a></li>
+<li><a href="#percolator%E4%B8%A4%E9%98%B6%E6%AE%B5%E6%8F%90%E4%BA%A4">Percolator两阶段提交</a></li>
+<li><a href="#percolator%E4%BC%98%E7%BC%BA%E7%82%B9">Percolator优缺点</a>
+<ul>
+<li><a href="#%E7%BC%BA%E7%82%B9">缺点</a></li>
+</ul>
+</li>
+<li><a href="#%E5%8F%82%E8%80%83">参考</a></li>
+</ul>
+</li>
+</ul>
+
+              </div>
+            </div>
+          </article>
+        </div>
+
+        
+          <div class="next-post">
+            <div class="next">下一篇</div>
+            <a href="https://tong-hao.github.io/lun-wen-_livegraph/">
+              <h3 class="post-title">
+                论文_LiveGraph
+              </h3>
+            </a>
+          </div>
+        
+
+        
+          
+            <link rel="stylesheet" href="https://unpkg.com/gitalk/dist/gitalk.css">
+<script src="https://unpkg.com/gitalk/dist/gitalk.min.js"></script>
+
+<div id="gitalk-container"></div>
+
+<script>
+
+  var gitalk = new Gitalk({
+    clientID: 'Ov23lieprxymzcVgZ0O1',
+    clientSecret: 'a8031fbd8318b584d517fd25242e7c8bdaf1c896',
+    repo: 'tong-hao.github.io',
+    owner: 'tong-hao',
+    admin: ['tong-hao'],
+    id: (location.pathname).substring(0, 49),      // Ensure uniqueness and length less than 50
+    distractionFreeMode: false  // Facebook-like distraction free mode
+  })
+
+  gitalk.render('gitalk-container')
+
+</script>
+
+          
+
+          
+        
+
+        <div class="site-footer">
+  
+  <a class="rss" href="https://tong-hao.github.io/atom.xml" target="_blank">
+    <i class="ri-rss-line"></i> RSS
+  </a>
+</div>
+
+      </div>
+    </div>
+
+    <script>
+      hljs.initHighlightingOnLoad()
+
+      let mainNavLinks = document.querySelectorAll(".markdownIt-TOC a");
+
+      // This should probably be throttled.
+      // Especially because it triggers during smooth scrolling.
+      // https://lodash.com/docs/4.17.10#throttle
+      // You could do like...
+      // window.addEventListener("scroll", () => {
+      //    _.throttle(doThatStuff, 100);
+      // });
+      // Only not doing it here to keep this Pen dependency-free.
+
+      window.addEventListener("scroll", event => {
+        let fromTop = window.scrollY;
+
+        mainNavLinks.forEach((link, index) => {
+          let section = document.getElementById(decodeURI(link.hash).substring(1));
+          let nextSection = null
+          if (mainNavLinks[index + 1]) {
+            nextSection = document.getElementById(decodeURI(mainNavLinks[index + 1].hash).substring(1));
+          }
+          if (section.offsetTop <= fromTop) {
+            if (nextSection) {
+              if (nextSection.offsetTop > fromTop) {
+                link.classList.add("current");
+              } else {
+                link.classList.remove("current");    
+              }
+            } else {
+              link.classList.add("current");
+            }
+          } else {
+            link.classList.remove("current");
+          }
+        });
+      });
+
+    </script>
+  </body>
+</html>

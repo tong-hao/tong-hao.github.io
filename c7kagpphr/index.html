@@ -1,0 +1,237 @@
+<html>
+  <head>
+    <meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>WAL | Caton Blog</title>
+<link rel="shortcut icon" href="https://tong-hao.github.io/favicon.ico?v=1753690290554">
+<link href="https://cdn.jsdelivr.net/npm/remixicon@2.3.0/fonts/remixicon.css" rel="stylesheet">
+<link rel="stylesheet" href="https://tong-hao.github.io/styles/main.css">
+<link rel="alternate" type="application/atom+xml" title="WAL | Caton Blog - Atom Feed" href="https://tong-hao.github.io/atom.xml">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Droid+Serif:400,700">
+
+
+
+    <meta name="description" content="WAL（Write-Ahead Log）是什么？
+WAL（Write-Ahead Log）是一种数据库技术，用于确保数据的持久性和一致性。它是一种日志机制，记录了数据库中的所有修改操作，包括插入、更新和删除。WAL将这些修改操作以顺序方式写..." />
+    <meta name="keywords" content="数据库" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+    <script src="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.5.1/build/highlight.min.js"></script>
+  </head>
+  <body>
+    <div class="main">
+      <div class="main-content">
+        <div class="site-header">
+  <a href="https://tong-hao.github.io">
+  <img class="avatar" src="https://tong-hao.github.io/images/avatar.png?v=1753690290554" alt="">
+  </a>
+  <h1 class="site-title">
+    Caton Blog
+  </h1>
+  <p class="site-description">
+    ✍️一个专注于数据库的博客
+  </p>
+  <div class="menu-container">
+    
+      
+        <a href="/" class="menu">
+          首页
+        </a>
+      
+    
+      
+        <a href="/about" class="menu">
+          关于
+        </a>
+      
+    
+      
+        <a href="/tags" class="menu">
+          标签
+        </a>
+      
+    
+      
+        <a href="/pg" class="menu">
+          #pg
+        </a>
+      
+    
+      
+        <a href="/db" class="menu">
+          #数据库内核
+        </a>
+      
+    
+      
+        <a href="/graph-db" class="menu">
+          #图数据库
+        </a>
+      
+    
+      
+        <a href="/creation" class="menu">
+          #个人作品
+        </a>
+      
+    
+      
+        <a href="/cpp" class="menu">
+          #c++
+        </a>
+      
+    
+  </div>
+  <div class="social-container">
+    
+      
+        <a href="https://github.com/tong-hao" target="_blank">
+          <i class="ri-github-line"></i>
+        </a>
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+  </div>
+</div>
+
+        <div class="post-detail">
+          <article class="post">
+            <h2 class="post-title">
+              WAL
+            </h2>
+            <div class="post-info">
+              <span>
+                2024-06-01
+              </span>
+              <span>
+                3 min read
+              </span>
+              
+                <a href="https://tong-hao.github.io/db/" class="post-tag">
+                  # 数据库
+                </a>
+              
+            </div>
+            
+            <div class="post-content-wrapper">
+              <div class="post-content" v-pre>
+                <p><strong>WAL（Write-Ahead Log）是什么？</strong></p>
+<p>WAL（Write-Ahead Log）是一种数据库技术，用于确保数据的持久性和一致性。它<mark>是一种日志机制，记录了数据库中的所有修改操作</mark>，包括插入、更新和删除。WAL将这些修改操作以顺序方式写入日志文件，然后再将其应用到数据库文件中。</p>
+<p><strong>WAL解决了什么问题？</strong><br>
+WAL解决了数据库系统中的持久性和并发控制问题。</p>
+<ol>
+<li>
+<p><strong>持久性</strong>：WAL确保了数据的持久性，即使在数据库系统崩溃或断电的情况下。通过将修改操作写入日志文件，而不是直接写入数据库文件，WAL提供了一种可靠的方式来恢复数据库到崩溃前的状态。在系统恢复时，可以使用WAL日志文件中的信息来重新应用未完成的事务和恢复已提交的事务，从而保持数据的一致性和完整性。</p>
+</li>
+<li>
+<p><strong>并发控制</strong>：WAL还解决了并发访问数据库时的一致性问题。通过将修改操作记录在WAL日志中，数据库系统可以在并发事务执行期间保持数据的一致性。WAL使用了多版本并发控制（MVCC）机制，每个事务在读取数据时使用自己的一致性视图，而不会受到其他并发事务的影响。这样可以避免读取到未提交的数据或读取到已修改的数据，确保事务的隔离性和一致性。</p>
+</li>
+</ol>
+<p>总之，WAL是一种用于确保数据库持久性和并发控制的日志机制。它通过将修改操作记录在日志文件中，提供了一种可靠的方式来恢复数据库并保持数据的一致性。同时，WAL还通过使用MVCC机制来解决并发访问时的一致性问题。</p>
+<p>WAL（Write-Ahead Logging）是关系数据库系统中用于提供原子性和持久性（ACID属性中的两个）的一系列技术。在WAL中，<mark>所有的修改在提交之前都要先写入日志文件中</mark>，包括redo和undo信息。这样做可以保证数据的安全性。<mark>具体的工作机制是：先在内存中提交事务，然后写日志（Redo Log），然后再后台任务中把内存中的数据异步刷到磁盘。</mark></p>
+
+              </div>
+              <div class="toc-container">
+                
+              </div>
+            </div>
+          </article>
+        </div>
+
+        
+          <div class="next-post">
+            <div class="next">下一篇</div>
+            <a href="https://tong-hao.github.io/pGnz95I21/">
+              <h3 class="post-title">
+                tidb
+              </h3>
+            </a>
+          </div>
+        
+
+        
+          
+            <link rel="stylesheet" href="https://unpkg.com/gitalk/dist/gitalk.css">
+<script src="https://unpkg.com/gitalk/dist/gitalk.min.js"></script>
+
+<div id="gitalk-container"></div>
+
+<script>
+
+  var gitalk = new Gitalk({
+    clientID: 'Ov23lieprxymzcVgZ0O1',
+    clientSecret: 'a8031fbd8318b584d517fd25242e7c8bdaf1c896',
+    repo: 'tong-hao.github.io',
+    owner: 'tong-hao',
+    admin: ['tong-hao'],
+    id: (location.pathname).substring(0, 49),      // Ensure uniqueness and length less than 50
+    distractionFreeMode: false  // Facebook-like distraction free mode
+  })
+
+  gitalk.render('gitalk-container')
+
+</script>
+
+          
+
+          
+        
+
+        <div class="site-footer">
+  
+  <a class="rss" href="https://tong-hao.github.io/atom.xml" target="_blank">
+    <i class="ri-rss-line"></i> RSS
+  </a>
+</div>
+
+      </div>
+    </div>
+
+    <script>
+      hljs.initHighlightingOnLoad()
+
+      let mainNavLinks = document.querySelectorAll(".markdownIt-TOC a");
+
+      // This should probably be throttled.
+      // Especially because it triggers during smooth scrolling.
+      // https://lodash.com/docs/4.17.10#throttle
+      // You could do like...
+      // window.addEventListener("scroll", () => {
+      //    _.throttle(doThatStuff, 100);
+      // });
+      // Only not doing it here to keep this Pen dependency-free.
+
+      window.addEventListener("scroll", event => {
+        let fromTop = window.scrollY;
+
+        mainNavLinks.forEach((link, index) => {
+          let section = document.getElementById(decodeURI(link.hash).substring(1));
+          let nextSection = null
+          if (mainNavLinks[index + 1]) {
+            nextSection = document.getElementById(decodeURI(mainNavLinks[index + 1].hash).substring(1));
+          }
+          if (section.offsetTop <= fromTop) {
+            if (nextSection) {
+              if (nextSection.offsetTop > fromTop) {
+                link.classList.add("current");
+              } else {
+                link.classList.remove("current");    
+              }
+            } else {
+              link.classList.add("current");
+            }
+          } else {
+            link.classList.remove("current");
+          }
+        });
+      });
+
+    </script>
+  </body>
+</html>

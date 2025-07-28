@@ -1,0 +1,336 @@
+<html>
+  <head>
+    <meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>pg-vacuum的两种方式 | Caton Blog</title>
+<link rel="shortcut icon" href="https://tong-hao.github.io/favicon.ico?v=1753690290554">
+<link href="https://cdn.jsdelivr.net/npm/remixicon@2.3.0/fonts/remixicon.css" rel="stylesheet">
+<link rel="stylesheet" href="https://tong-hao.github.io/styles/main.css">
+<link rel="alternate" type="application/atom+xml" title="pg-vacuum的两种方式 | Caton Blog - Atom Feed" href="https://tong-hao.github.io/atom.xml">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Droid+Serif:400,700">
+
+
+
+    <meta name="description" content="
+vacuum的两种方式：lazy mode和eager mode
+
+lazy mode 对比 eager mode
+
+lazy mode使用的是lazy vacuum
+lazy vacuum运行时会扫描每个page上的dead tuple..." />
+    <meta name="keywords" content="postgresql" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+    <script src="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.5.1/build/highlight.min.js"></script>
+  </head>
+  <body>
+    <div class="main">
+      <div class="main-content">
+        <div class="site-header">
+  <a href="https://tong-hao.github.io">
+  <img class="avatar" src="https://tong-hao.github.io/images/avatar.png?v=1753690290554" alt="">
+  </a>
+  <h1 class="site-title">
+    Caton Blog
+  </h1>
+  <p class="site-description">
+    ✍️一个专注于数据库的博客
+  </p>
+  <div class="menu-container">
+    
+      
+        <a href="/" class="menu">
+          首页
+        </a>
+      
+    
+      
+        <a href="/about" class="menu">
+          关于
+        </a>
+      
+    
+      
+        <a href="/tags" class="menu">
+          标签
+        </a>
+      
+    
+      
+        <a href="/pg" class="menu">
+          #pg
+        </a>
+      
+    
+      
+        <a href="/db" class="menu">
+          #数据库内核
+        </a>
+      
+    
+      
+        <a href="/graph-db" class="menu">
+          #图数据库
+        </a>
+      
+    
+      
+        <a href="/creation" class="menu">
+          #个人作品
+        </a>
+      
+    
+      
+        <a href="/cpp" class="menu">
+          #c++
+        </a>
+      
+    
+  </div>
+  <div class="social-container">
+    
+      
+        <a href="https://github.com/tong-hao" target="_blank">
+          <i class="ri-github-line"></i>
+        </a>
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+  </div>
+</div>
+
+        <div class="post-detail">
+          <article class="post">
+            <h2 class="post-title">
+              pg-vacuum的两种方式
+            </h2>
+            <div class="post-info">
+              <span>
+                2024-06-11
+              </span>
+              <span>
+                2 min read
+              </span>
+              
+                <a href="https://tong-hao.github.io/pg/" class="post-tag">
+                  # postgresql
+                </a>
+              
+            </div>
+            
+            <div class="post-content-wrapper">
+              <div class="post-content" v-pre>
+                <ul>
+<li>vacuum的两种方式：lazy mode和eager mode</li>
+</ul>
+<h2 id="lazy-mode-对比-eager-mode">lazy mode 对比 eager mode</h2>
+<ul>
+<li>lazy mode使用的是lazy vacuum</li>
+<li>lazy vacuum运行时会扫描每个page上的dead tuple</li>
+<li>eager mode会扫描所有page，不管page中是否包含dead tuple。</li>
+</ul>
+<h2 id="lazy-mode的过程">lazy mode的过程</h2>
+<p>在开始时，会计算出 freezeLimit_txid 和 冻结的tuple。冻结的tuple是t_xmin小于freezeLimit_txid的tuple。</p>
+<p>freezeLimit_txid 值为 <code>OldestXmin - vacuum_freeze_min_age</code>。<br>
+OldestXmin 是 正在运行的事务中最早的txid。<br>
+vacuum_freeze_min_age 是在配置文件中配置的，默认值为50000000。</p>
+<h3 id="通过一个例子来理解整个过程">通过一个例子来理解整个过程</h3>
+<p><img src="https://tong-hao.github.io/post-images/1718074076726.webp" alt="" loading="lazy"><br>
+（图1）</p>
+<ul>
+<li>OldestXmin是50,002,500</li>
+<li>vacuum_freeze_min_age 配置的是 50000000</li>
+<li>freezeLimit_txid则为2500</li>
+<li>检查每个表的每个page
+<ul>
+<li>page-0：
+<ul>
+<li>检查vm，存在dead tuple，继续。</li>
+<li>三条记录的t_xmin都小于freezeLimit_txid，所以冻结这3条记录，其中tuple1会被清理掉。</li>
+</ul>
+</li>
+<li>page-1:
+<ul>
+<li>检查vm，发现不存在dead tuple，所以跳过</li>
+</ul>
+</li>
+<li>page-2:
+<ul>
+<li>检查vm，存在dead tuple，继续。</li>
+<li>tuple7和8的t_xmin都小于freezeLimit_txid，被冻结</li>
+<li>tuple7会被清理掉</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>更新统计信息
+<ul>
+<li>pg_stat_all_tables中的 n_live_tup, n_dead_tup, last_vacuum, vacuum_count等。</li>
+</ul>
+</li>
+</ul>
+<h2 id="eager-mode">eager mode</h2>
+<h3 id="执行条件">执行条件</h3>
+<p><code>pg_database.datfrozenxid &lt; (OldestXmin - vacuum_freeze_table_age)</code></p>
+<ul>
+<li>pg_database.datfrozenxid - 初始值为1821</li>
+<li>OldestXmin 是 正在运行的事务中最早的txid。</li>
+<li>vacuum_freeze_table_age是一个配置值，默认为150,000,000</li>
+</ul>
+<h3 id="通过一个例子理解整个过程">通过一个例子理解整个过程</h3>
+<p><img src="https://tong-hao.github.io/post-images/1718074093962.webp" alt="" loading="lazy"><br>
+（图2）</p>
+<ul>
+<li>pg_database.datfrozenxid为1821</li>
+<li>OldestXmin 为150,002,000</li>
+<li>freezeLimit_txid is 100,002,000</li>
+<li>vacuum_freeze_table_age是 150,000,000</li>
+<li><code>1821 &lt; (150,002,000 - 150,000,000)</code>， 所以条件满足</li>
+<li>检查每个table的每个page
+<ul>
+<li>page-0:
+<ul>
+<li>检查t_informask，两条记录均是冻结状态，所以跳过</li>
+</ul>
+</li>
+<li>page-1:
+<ul>
+<li>检查t_xmin，t_xmin 小于freezeLimit_txid的三条记录均被冻结</li>
+</ul>
+</li>
+<li>page-2:
+<ul>
+<li>检查t_xmin， tuple10会被冻结，tuple11不会被冻结。</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<p><strong>问题：</strong> page-0中所有的tuple是冻结的，但是还是scan了所有的数据。<br>
+<strong>优化：</strong> 在9.6版本中，如果page中的所有tuple均是冻结状态，会在vm文件中记录1，否则记录为0，见图3。</p>
+<p><img src="https://tong-hao.github.io/post-images/1718074109492.webp" alt="" loading="lazy"><br>
+（图3）</p>
+
+              </div>
+              <div class="toc-container">
+                <ul class="markdownIt-TOC">
+<li>
+<ul>
+<li><a href="#lazy-mode-%E5%AF%B9%E6%AF%94-eager-mode">lazy mode 对比 eager mode</a></li>
+<li><a href="#lazy-mode%E7%9A%84%E8%BF%87%E7%A8%8B">lazy mode的过程</a>
+<ul>
+<li><a href="#%E9%80%9A%E8%BF%87%E4%B8%80%E4%B8%AA%E4%BE%8B%E5%AD%90%E6%9D%A5%E7%90%86%E8%A7%A3%E6%95%B4%E4%B8%AA%E8%BF%87%E7%A8%8B">通过一个例子来理解整个过程</a></li>
+</ul>
+</li>
+<li><a href="#eager-mode">eager mode</a>
+<ul>
+<li><a href="#%E6%89%A7%E8%A1%8C%E6%9D%A1%E4%BB%B6">执行条件</a></li>
+<li><a href="#%E9%80%9A%E8%BF%87%E4%B8%80%E4%B8%AA%E4%BE%8B%E5%AD%90%E7%90%86%E8%A7%A3%E6%95%B4%E4%B8%AA%E8%BF%87%E7%A8%8B">通过一个例子理解整个过程</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+              </div>
+            </div>
+          </article>
+        </div>
+
+        
+          <div class="next-post">
+            <div class="next">下一篇</div>
+            <a href="https://tong-hao.github.io/TPf7uoY40/">
+              <h3 class="post-title">
+                pg-visibility map
+              </h3>
+            </a>
+          </div>
+        
+
+        
+          
+            <link rel="stylesheet" href="https://unpkg.com/gitalk/dist/gitalk.css">
+<script src="https://unpkg.com/gitalk/dist/gitalk.min.js"></script>
+
+<div id="gitalk-container"></div>
+
+<script>
+
+  var gitalk = new Gitalk({
+    clientID: 'Ov23lieprxymzcVgZ0O1',
+    clientSecret: 'a8031fbd8318b584d517fd25242e7c8bdaf1c896',
+    repo: 'tong-hao.github.io',
+    owner: 'tong-hao',
+    admin: ['tong-hao'],
+    id: (location.pathname).substring(0, 49),      // Ensure uniqueness and length less than 50
+    distractionFreeMode: false  // Facebook-like distraction free mode
+  })
+
+  gitalk.render('gitalk-container')
+
+</script>
+
+          
+
+          
+        
+
+        <div class="site-footer">
+  
+  <a class="rss" href="https://tong-hao.github.io/atom.xml" target="_blank">
+    <i class="ri-rss-line"></i> RSS
+  </a>
+</div>
+
+      </div>
+    </div>
+
+    <script>
+      hljs.initHighlightingOnLoad()
+
+      let mainNavLinks = document.querySelectorAll(".markdownIt-TOC a");
+
+      // This should probably be throttled.
+      // Especially because it triggers during smooth scrolling.
+      // https://lodash.com/docs/4.17.10#throttle
+      // You could do like...
+      // window.addEventListener("scroll", () => {
+      //    _.throttle(doThatStuff, 100);
+      // });
+      // Only not doing it here to keep this Pen dependency-free.
+
+      window.addEventListener("scroll", event => {
+        let fromTop = window.scrollY;
+
+        mainNavLinks.forEach((link, index) => {
+          let section = document.getElementById(decodeURI(link.hash).substring(1));
+          let nextSection = null
+          if (mainNavLinks[index + 1]) {
+            nextSection = document.getElementById(decodeURI(mainNavLinks[index + 1].hash).substring(1));
+          }
+          if (section.offsetTop <= fromTop) {
+            if (nextSection) {
+              if (nextSection.offsetTop > fromTop) {
+                link.classList.add("current");
+              } else {
+                link.classList.remove("current");    
+              }
+            } else {
+              link.classList.add("current");
+            }
+          } else {
+            link.classList.remove("current");
+          }
+        });
+      });
+
+    </script>
+  </body>
+</html>

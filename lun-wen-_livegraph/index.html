@@ -1,0 +1,292 @@
+<html>
+  <head>
+    <meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>论文_LiveGraph | Caton Blog</title>
+<link rel="shortcut icon" href="https://tong-hao.github.io/favicon.ico?v=1753690290554">
+<link href="https://cdn.jsdelivr.net/npm/remixicon@2.3.0/fonts/remixicon.css" rel="stylesheet">
+<link rel="stylesheet" href="https://tong-hao.github.io/styles/main.css">
+<link rel="alternate" type="application/atom+xml" title="论文_LiveGraph | Caton Blog - Atom Feed" href="https://tong-hao.github.io/atom.xml">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Droid+Serif:400,700">
+
+
+
+    <meta name="description" content="
+论文《LiveGraph: A Transactional Graph Storage System with Purely Sequential Adjacency List Scans》
+作者：朱晓伟
+
+存储结构
+
+顶点存储
+
+一个顶..." />
+    <meta name="keywords" content="图数据库" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+    <script src="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.5.1/build/highlight.min.js"></script>
+  </head>
+  <body>
+    <div class="main">
+      <div class="main-content">
+        <div class="site-header">
+  <a href="https://tong-hao.github.io">
+  <img class="avatar" src="https://tong-hao.github.io/images/avatar.png?v=1753690290554" alt="">
+  </a>
+  <h1 class="site-title">
+    Caton Blog
+  </h1>
+  <p class="site-description">
+    ✍️一个专注于数据库的博客
+  </p>
+  <div class="menu-container">
+    
+      
+        <a href="/" class="menu">
+          首页
+        </a>
+      
+    
+      
+        <a href="/about" class="menu">
+          关于
+        </a>
+      
+    
+      
+        <a href="/tags" class="menu">
+          标签
+        </a>
+      
+    
+      
+        <a href="/pg" class="menu">
+          #pg
+        </a>
+      
+    
+      
+        <a href="/db" class="menu">
+          #数据库内核
+        </a>
+      
+    
+      
+        <a href="/graph-db" class="menu">
+          #图数据库
+        </a>
+      
+    
+      
+        <a href="/creation" class="menu">
+          #个人作品
+        </a>
+      
+    
+      
+        <a href="/cpp" class="menu">
+          #c++
+        </a>
+      
+    
+  </div>
+  <div class="social-container">
+    
+      
+        <a href="https://github.com/tong-hao" target="_blank">
+          <i class="ri-github-line"></i>
+        </a>
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+  </div>
+</div>
+
+        <div class="post-detail">
+          <article class="post">
+            <h2 class="post-title">
+              论文_LiveGraph
+            </h2>
+            <div class="post-info">
+              <span>
+                2024-06-01
+              </span>
+              <span>
+                2 min read
+              </span>
+              
+                <a href="https://tong-hao.github.io/graph-db/" class="post-tag">
+                  # 图数据库
+                </a>
+              
+            </div>
+            
+            <div class="post-content-wrapper">
+              <div class="post-content" v-pre>
+                <blockquote>
+<p>论文《LiveGraph: A Transactional Graph Storage System with Purely Sequential Adjacency List Scans》<br>
+作者：朱晓伟</p>
+</blockquote>
+<h3 id="存储结构">存储结构</h3>
+<ul>
+<li>顶点存储</li>
+</ul>
+<p>一个顶点存在一个vertex block(VB)中，Vertex Index会指向最新版本的顶点数据。</p>
+<p>更新顶点时，创建一个VB，新VB会指向前一个版本的VB，然后更新index中的指针。</p>
+<figure data-type="image" tabindex="1"><img src="https://tong-hao.github.io/post-images/%E8%AE%BA%E6%96%87_LiveGraph/cde3c731047ff0829bd743981ccbbd9eef3f1a80.webp" alt="" loading="lazy"></figure>
+<ul>
+<li>
+<p>边存储<br>
+边的存储与顶点类似，Edge index会指向一个TEL，TEL会存储一个顶点的所有出边和边属性。每个TEL会指向前一个版本的TEL，index指向最新版本的TEL。</p>
+</li>
+<li>
+<p>TEL</p>
+<p>一个TEL有三个部分：header、property entries、edge log entries。</p>
+<p>header中有边的源顶点ID，和bloom filter。</p>
+<p>每个property entry变长的，存储的是map</p>
+</li>
+</ul>
+<figure data-type="image" tabindex="2"><img src="https://tong-hao.github.io/post-images/%E8%AE%BA%E6%96%87_LiveGraph/5ff9f5362cc0e91e26a9b62783ccf73ed25ba383.webp" alt="" loading="lazy"></figure>
+<p>每个edge log entry由4部分构成：dest id、创建时间、失效时间、属性大小(也就是property entry大小)。</p>
+<figure data-type="image" tabindex="3"><img src="https://tong-hao.github.io/post-images/%E8%AE%BA%E6%96%87_LiveGraph/15f8fa4164bd8ba127f3ae4014965da86df10d89.webp" alt="" loading="lazy"></figure>
+<h3 id="事务操作">事务操作</h3>
+<ul>
+<li>每个事务有两个变量：TRE、TWE<br>
+TRE是a transaction-local read epoch counter，TWE是a transactin-loca write epoch counter</li>
+<li>读数据时，使用当前的TRE对比数据
+<ul>
+<li>如果是顶点，TRE &gt;= CreationTS &amp;&amp; TRE&lt;=InvalidationTS</li>
+<li>如果是边，
+<ul>
+<li>(0 &lt;= CreationTS &lt;= TRE)</li>
+<li>AND ( (TRE &lt; InvalidationTS) OR (InvalidationTS &lt; 0) ) ,</li>
+<li>or (CreationTS == -TID) AND (InvalidationTS != -TID)</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>写入数据分三个阶段：work, persist, and apply
+<ul>
+<li>work：获取锁，添加entry，获取上一个版本的记录，设置过期时间。</li>
+</ul>
+</li>
+</ul>
+<figure data-type="image" tabindex="4"><img src="https://tong-hao.github.io/post-images/%E8%AE%BA%E6%96%87_LiveGraph/17b2f8e06587b89bffce4231809a901ef40d1649.webp" alt="" loading="lazy"></figure>
+<figure data-type="image" tabindex="5"><img src="https://tong-hao.github.io/post-images/%E8%AE%BA%E6%96%87_LiveGraph/c83eb15ddaaee074234183742748c7126041bbde.webp" alt="" loading="lazy"></figure>
+
+              </div>
+              <div class="toc-container">
+                <ul class="markdownIt-TOC">
+<li>
+<ul>
+<li>
+<ul>
+<li><a href="#%E5%AD%98%E5%82%A8%E7%BB%93%E6%9E%84">存储结构</a></li>
+<li><a href="#%E4%BA%8B%E5%8A%A1%E6%93%8D%E4%BD%9C">事务操作</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+              </div>
+            </div>
+          </article>
+        </div>
+
+        
+          <div class="next-post">
+            <div class="next">下一篇</div>
+            <a href="https://tong-hao.github.io/lun-wen-_kineograph/">
+              <h3 class="post-title">
+                论文_kineograph
+              </h3>
+            </a>
+          </div>
+        
+
+        
+          
+            <link rel="stylesheet" href="https://unpkg.com/gitalk/dist/gitalk.css">
+<script src="https://unpkg.com/gitalk/dist/gitalk.min.js"></script>
+
+<div id="gitalk-container"></div>
+
+<script>
+
+  var gitalk = new Gitalk({
+    clientID: 'Ov23lieprxymzcVgZ0O1',
+    clientSecret: 'a8031fbd8318b584d517fd25242e7c8bdaf1c896',
+    repo: 'tong-hao.github.io',
+    owner: 'tong-hao',
+    admin: ['tong-hao'],
+    id: (location.pathname).substring(0, 49),      // Ensure uniqueness and length less than 50
+    distractionFreeMode: false  // Facebook-like distraction free mode
+  })
+
+  gitalk.render('gitalk-container')
+
+</script>
+
+          
+
+          
+        
+
+        <div class="site-footer">
+  
+  <a class="rss" href="https://tong-hao.github.io/atom.xml" target="_blank">
+    <i class="ri-rss-line"></i> RSS
+  </a>
+</div>
+
+      </div>
+    </div>
+
+    <script>
+      hljs.initHighlightingOnLoad()
+
+      let mainNavLinks = document.querySelectorAll(".markdownIt-TOC a");
+
+      // This should probably be throttled.
+      // Especially because it triggers during smooth scrolling.
+      // https://lodash.com/docs/4.17.10#throttle
+      // You could do like...
+      // window.addEventListener("scroll", () => {
+      //    _.throttle(doThatStuff, 100);
+      // });
+      // Only not doing it here to keep this Pen dependency-free.
+
+      window.addEventListener("scroll", event => {
+        let fromTop = window.scrollY;
+
+        mainNavLinks.forEach((link, index) => {
+          let section = document.getElementById(decodeURI(link.hash).substring(1));
+          let nextSection = null
+          if (mainNavLinks[index + 1]) {
+            nextSection = document.getElementById(decodeURI(mainNavLinks[index + 1].hash).substring(1));
+          }
+          if (section.offsetTop <= fromTop) {
+            if (nextSection) {
+              if (nextSection.offsetTop > fromTop) {
+                link.classList.add("current");
+              } else {
+                link.classList.remove("current");    
+              }
+            } else {
+              link.classList.add("current");
+            }
+          } else {
+            link.classList.remove("current");
+          }
+        });
+      });
+
+    </script>
+  </body>
+</html>

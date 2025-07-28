@@ -1,0 +1,273 @@
+<html>
+  <head>
+    <meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>pg-WAL的写入过程 | Caton Blog</title>
+<link rel="shortcut icon" href="https://tong-hao.github.io/favicon.ico?v=1753690290554">
+<link href="https://cdn.jsdelivr.net/npm/remixicon@2.3.0/fonts/remixicon.css" rel="stylesheet">
+<link rel="stylesheet" href="https://tong-hao.github.io/styles/main.css">
+<link rel="alternate" type="application/atom+xml" title="pg-WAL的写入过程 | Caton Blog - Atom Feed" href="https://tong-hao.github.io/atom.xml">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Droid+Serif:400,700">
+
+
+
+    <meta name="description" content="WAL写入过程
+下面是WAL写入过程的伪代码：
+exec_simple_query() @postgres.c
+      (1) ExtendCLOG() @clog.c                  /* Write the sta..." />
+    <meta name="keywords" content="postgresql" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+    <script src="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.5.1/build/highlight.min.js"></script>
+  </head>
+  <body>
+    <div class="main">
+      <div class="main-content">
+        <div class="site-header">
+  <a href="https://tong-hao.github.io">
+  <img class="avatar" src="https://tong-hao.github.io/images/avatar.png?v=1753690290554" alt="">
+  </a>
+  <h1 class="site-title">
+    Caton Blog
+  </h1>
+  <p class="site-description">
+    ✍️一个专注于数据库的博客
+  </p>
+  <div class="menu-container">
+    
+      
+        <a href="/" class="menu">
+          首页
+        </a>
+      
+    
+      
+        <a href="/about" class="menu">
+          关于
+        </a>
+      
+    
+      
+        <a href="/tags" class="menu">
+          标签
+        </a>
+      
+    
+      
+        <a href="/pg" class="menu">
+          #pg
+        </a>
+      
+    
+      
+        <a href="/db" class="menu">
+          #数据库内核
+        </a>
+      
+    
+      
+        <a href="/graph-db" class="menu">
+          #图数据库
+        </a>
+      
+    
+      
+        <a href="/creation" class="menu">
+          #个人作品
+        </a>
+      
+    
+      
+        <a href="/cpp" class="menu">
+          #c++
+        </a>
+      
+    
+  </div>
+  <div class="social-container">
+    
+      
+        <a href="https://github.com/tong-hao" target="_blank">
+          <i class="ri-github-line"></i>
+        </a>
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+  </div>
+</div>
+
+        <div class="post-detail">
+          <article class="post">
+            <h2 class="post-title">
+              pg-WAL的写入过程
+            </h2>
+            <div class="post-info">
+              <span>
+                2024-06-11
+              </span>
+              <span>
+                2 min read
+              </span>
+              
+                <a href="https://tong-hao.github.io/pg/" class="post-tag">
+                  # postgresql
+                </a>
+              
+            </div>
+            
+            <div class="post-content-wrapper">
+              <div class="post-content" v-pre>
+                <h2 id="wal写入过程">WAL写入过程</h2>
+<p>下面是WAL写入过程的伪代码：</p>
+<pre><code class="language-c++">exec_simple_query() @postgres.c
+      (1) ExtendCLOG() @clog.c                  /* Write the state of this transaction
+                                                 * &quot;IN_PROGRESS&quot; to the CLOG.
+                                                 */
+      (2) heap_insert()@heapam.c                /* Insert a tuple, creates a XLOG record,
+                                                 * and invoke the function XLogInsert.
+                                                 */
+      (3)   XLogInsert() @xloginsert.c (9.4 or earlier, xlog.c)
+                                                /* Write the XLOG record of the inserted tuple
+                                                 *  to the WAL buffer, and update page's pd_lsn.
+                                                 */
+      (4) finish_xact_command() @postgres.c     /* Invoke commit action.*/   
+            XLogInsert() @xloginsert.c (9.4 or earlier, xlog.c)
+                                                /* Write a XLOG record of this commit action 
+                                                 * to the WAL buffer.
+                                                 */
+      (5)   XLogWrite() @xloginsert.c (9.4 or earlier, xlog.c)
+                                                /* Write and flush all XLOG records on
+                                                 * the WAL buffer to WAL segment.
+                                                 */
+      (6) TransactionIdCommitTree() @transam.c  /* Change the state of this transaction 
+                                                 * from &quot;IN_PROGRESS&quot; to &quot;COMMITTED&quot;
+                                                 * on the CLOG.
+                                                 */
+</code></pre>
+<ol>
+<li>ExtendCLOG() 会写入一个‘IN_PROGRESS’状态到clog buffer中</li>
+<li>heap_insert() 插入tuple到对应的page中，同时创建XLOG记录</li>
+<li>XLogInsert() 将XLOG记录写入WAL buffer中，同时更新page中的lsn</li>
+<li>finish_xact_command() 会发起commit，会调用XLogInsert() 插入一个commit XLOG记录到WAL buffer中</li>
+<li>XLogWrite() 会将在WAL buffer中的XLOG记录刷新到WAL文件中</li>
+<li>finish_xact_command()  会写入一个‘COMMITTED’状态到clog中</li>
+</ol>
+<h2 id="wal进程">WAL进程</h2>
+<ul>
+<li>WAL进程会定期的检查WAL buffer，将xlog记录写入到wal文件中。避免大量的数据在commit时候写文件产生的瓶颈问题。</li>
+<li>时间间隔通过参数wal_writer_delay控制</li>
+</ul>
+
+              </div>
+              <div class="toc-container">
+                <ul class="markdownIt-TOC">
+<li>
+<ul>
+<li><a href="#wal%E5%86%99%E5%85%A5%E8%BF%87%E7%A8%8B">WAL写入过程</a></li>
+<li><a href="#wal%E8%BF%9B%E7%A8%8B">WAL进程</a></li>
+</ul>
+</li>
+</ul>
+
+              </div>
+            </div>
+          </article>
+        </div>
+
+        
+          <div class="next-post">
+            <div class="next">下一篇</div>
+            <a href="https://tong-hao.github.io/zu96T1a5o/">
+              <h3 class="post-title">
+                pg-WAL的结构
+              </h3>
+            </a>
+          </div>
+        
+
+        
+          
+            <link rel="stylesheet" href="https://unpkg.com/gitalk/dist/gitalk.css">
+<script src="https://unpkg.com/gitalk/dist/gitalk.min.js"></script>
+
+<div id="gitalk-container"></div>
+
+<script>
+
+  var gitalk = new Gitalk({
+    clientID: 'Ov23lieprxymzcVgZ0O1',
+    clientSecret: 'a8031fbd8318b584d517fd25242e7c8bdaf1c896',
+    repo: 'tong-hao.github.io',
+    owner: 'tong-hao',
+    admin: ['tong-hao'],
+    id: (location.pathname).substring(0, 49),      // Ensure uniqueness and length less than 50
+    distractionFreeMode: false  // Facebook-like distraction free mode
+  })
+
+  gitalk.render('gitalk-container')
+
+</script>
+
+          
+
+          
+        
+
+        <div class="site-footer">
+  
+  <a class="rss" href="https://tong-hao.github.io/atom.xml" target="_blank">
+    <i class="ri-rss-line"></i> RSS
+  </a>
+</div>
+
+      </div>
+    </div>
+
+    <script>
+      hljs.initHighlightingOnLoad()
+
+      let mainNavLinks = document.querySelectorAll(".markdownIt-TOC a");
+
+      // This should probably be throttled.
+      // Especially because it triggers during smooth scrolling.
+      // https://lodash.com/docs/4.17.10#throttle
+      // You could do like...
+      // window.addEventListener("scroll", () => {
+      //    _.throttle(doThatStuff, 100);
+      // });
+      // Only not doing it here to keep this Pen dependency-free.
+
+      window.addEventListener("scroll", event => {
+        let fromTop = window.scrollY;
+
+        mainNavLinks.forEach((link, index) => {
+          let section = document.getElementById(decodeURI(link.hash).substring(1));
+          let nextSection = null
+          if (mainNavLinks[index + 1]) {
+            nextSection = document.getElementById(decodeURI(mainNavLinks[index + 1].hash).substring(1));
+          }
+          if (section.offsetTop <= fromTop) {
+            if (nextSection) {
+              if (nextSection.offsetTop > fromTop) {
+                link.classList.add("current");
+              } else {
+                link.classList.remove("current");    
+              }
+            } else {
+              link.classList.add("current");
+            }
+          } else {
+            link.classList.remove("current");
+          }
+        });
+      });
+
+    </script>
+  </body>
+</html>

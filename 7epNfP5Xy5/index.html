@@ -1,0 +1,359 @@
+<html>
+  <head>
+    <meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>nebula-查询层 | Caton Blog</title>
+<link rel="shortcut icon" href="https://tong-hao.github.io/favicon.ico?v=1753690290554">
+<link href="https://cdn.jsdelivr.net/npm/remixicon@2.3.0/fonts/remixicon.css" rel="stylesheet">
+<link rel="stylesheet" href="https://tong-hao.github.io/styles/main.css">
+<link rel="alternate" type="application/atom+xml" title="nebula-查询层 | Caton Blog - Atom Feed" href="https://tong-hao.github.io/atom.xml">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Droid+Serif:400,700">
+
+
+
+    <meta name="description" content="1 整体流程
+整体流程：解析器 -&gt; 校验器 -&gt; 计划器 -&gt; 优化器 -&gt; 执行器
+(ngql)-&gt;
+(parser)-[AST]-&gt;
+(validator)-[AST]-&gt;
+(planner)..." />
+    <meta name="keywords" content="nebula,图数据库" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+    <script src="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.5.1/build/highlight.min.js"></script>
+  </head>
+  <body>
+    <div class="main">
+      <div class="main-content">
+        <div class="site-header">
+  <a href="https://tong-hao.github.io">
+  <img class="avatar" src="https://tong-hao.github.io/images/avatar.png?v=1753690290554" alt="">
+  </a>
+  <h1 class="site-title">
+    Caton Blog
+  </h1>
+  <p class="site-description">
+    ✍️一个专注于数据库的博客
+  </p>
+  <div class="menu-container">
+    
+      
+        <a href="/" class="menu">
+          首页
+        </a>
+      
+    
+      
+        <a href="/about" class="menu">
+          关于
+        </a>
+      
+    
+      
+        <a href="/tags" class="menu">
+          标签
+        </a>
+      
+    
+      
+        <a href="/pg" class="menu">
+          #pg
+        </a>
+      
+    
+      
+        <a href="/db" class="menu">
+          #数据库内核
+        </a>
+      
+    
+      
+        <a href="/graph-db" class="menu">
+          #图数据库
+        </a>
+      
+    
+      
+        <a href="/creation" class="menu">
+          #个人作品
+        </a>
+      
+    
+      
+        <a href="/cpp" class="menu">
+          #c++
+        </a>
+      
+    
+  </div>
+  <div class="social-container">
+    
+      
+        <a href="https://github.com/tong-hao" target="_blank">
+          <i class="ri-github-line"></i>
+        </a>
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+  </div>
+</div>
+
+        <div class="post-detail">
+          <article class="post">
+            <h2 class="post-title">
+              nebula-查询层
+            </h2>
+            <div class="post-info">
+              <span>
+                2025-07-28
+              </span>
+              <span>
+                4 min read
+              </span>
+              
+                <a href="https://tong-hao.github.io/TyVl4PGI8S/" class="post-tag">
+                  # nebula
+                </a>
+              
+                <a href="https://tong-hao.github.io/graph-db/" class="post-tag">
+                  # 图数据库
+                </a>
+              
+            </div>
+            
+            <div class="post-content-wrapper">
+              <div class="post-content" v-pre>
+                <h2 id="1-整体流程">1 整体流程</h2>
+<p>整体流程：解析器 -&gt; 校验器 -&gt; 计划器 -&gt; 优化器 -&gt; 执行器</p>
+<pre><code>(ngql)-&gt;
+(parser)-[AST]-&gt;
+(validator)-[AST]-&gt;
+(planner)-[plan tree]-&gt;
+(optimizer)-[plan tree]-&gt;
+(executor)-[action]-&gt;
+(storage client)
+</code></pre>
+<p>补充：</p>
+<ul>
+<li>执行模型：火山、物化、向量，Nebula用的是火山模型。</li>
+</ul>
+<h2 id="2-parser">2 Parser</h2>
+<p>1） <code>src/parser/parser.yy</code> 文件中定义了ngql的语法规则，这里面会创建 xxxSentence。</p>
+<p>2） 执行 <code>auto result = GQLParser(qctx()).parse(rctx-&gt;query());</code> 时候对用户输入的ngql进行解析，这里会调用flex/bison。</p>
+<h2 id="3-validator">3 Validator</h2>
+<p>1）validator在 src/graph/validator 目录下，会为不同的Sentence创建对应的 validator<br>
+2）每个validator 都实现了 <code>validateImpl()</code>  方法，并在这里完成校验</p>
+<h2 id="4-optimizer">4 Optimizer</h2>
+<ul>
+<li>Nebula Graph 主要实现的是 RBO</li>
+<li>代码在 <code>src/optimizer</code>，<code>src/optimizer/rule</code>目录则是预设的规则集</li>
+<li>优化器优化查询的入口则在<code>src/service/QueryInstance.cpp</code>文件中</li>
+</ul>
+<pre><code class="language-C++">Status QueryInstance::validateAndOptimize() {
+    auto *rctx = qctx()-&gt;rctx();
+    VLOG(1) &lt;&lt; &quot;Parsing query: &quot; &lt;&lt; rctx-&gt;query();
+    auto result = GQLParser(qctx()).parse(rctx-&gt;query());
+    NG_RETURN_IF_ERROR(result);
+    sentence_ = std::move(result).value();
+
+    NG_RETURN_IF_ERROR(Validator::validate(sentence_.get(), qctx()));
+    NG_RETURN_IF_ERROR(findBestPlan());
+
+    return Status::OK();
+}
+</code></pre>
+<p><code>findBestPlan</code>函数会调用优化器，优化并返回一个全新的优化过的执行计划。</p>
+<p>优化器实现的一个例子：<br>
+<img src="https://tong-hao.github.io/post-images/1753688788666.webp" alt="" loading="lazy"><br>
+<code>src/optimizer/rule/LimitPushDownRule.cpp</code>文件：</p>
+<pre><code class="language-C++">
+std::unique_ptr&lt;OptRule&gt; LimitPushDownRule::kInstance =
+    std::unique_ptr&lt;LimitPushDownRule&gt;(new LimitPushDownRule());
+
+LimitPushDownRule::LimitPushDownRule() {
+    RuleSet::QueryRules().addRule(this);
+}
+
+const Pattern &amp;LimitPushDownRule::pattern() const {
+    static Pattern pattern =
+        Pattern::create(graph::PlanNode::Kind::kLimit,
+                        {Pattern::create(graph::PlanNode::Kind::kProject,
+                                         {Pattern::create(graph::PlanNode::Kind::kGetNeighbors)})});
+    return pattern;
+}
+</code></pre>
+<pre><code class="language-C++">StatusOr&lt;OptRule::TransformResult&gt; LimitPushDownRule::transform(
+    OptContext *octx,
+    const MatchedResult &amp;matched) const {
+    auto limitGroupNode = matched.node;
+    auto projGroupNode = matched.dependencies.front().node;
+    auto gnGroupNode = matched.dependencies.front().dependencies.front().node;
+
+    const auto limit = static_cast&lt;const Limit *&gt;(limitGroupNode-&gt;node());
+    const auto proj = static_cast&lt;const Project *&gt;(projGroupNode-&gt;node());
+    const auto gn = static_cast&lt;const GetNeighbors *&gt;(gnGroupNode-&gt;node());
+
+    int64_t limitRows = limit-&gt;offset() + limit-&gt;count();
+    if (gn-&gt;limit() &gt;= 0 &amp;&amp; limitRows &gt;= gn-&gt;limit()) {
+        return TransformResult::noTransform();
+    }
+
+    auto newLimit = static_cast&lt;Limit *&gt;(limit-&gt;clone());
+    auto newLimitGroupNode = OptGroupNode::create(octx, newLimit, limitGroupNode-&gt;group());
+
+    auto newProj = static_cast&lt;Project *&gt;(proj-&gt;clone());
+    auto newProjGroup = OptGroup::create(octx);
+    auto newProjGroupNode = newProjGroup-&gt;makeGroupNode(newProj);
+
+    auto newGn = static_cast&lt;GetNeighbors *&gt;(gn-&gt;clone());
+    newGn-&gt;setLimit(limitRows);
+    auto newGnGroup = OptGroup::create(octx);
+    auto newGnGroupNode = newGnGroup-&gt;makeGroupNode(newGn);
+
+    newLimitGroupNode-&gt;dependsOn(newProjGroup);
+    newProjGroupNode-&gt;dependsOn(newGnGroup);
+    for (auto dep : gnGroupNode-&gt;dependencies()) {
+        newGnGroupNode-&gt;dependsOn(dep);
+    }
+
+    TransformResult result;
+    result.eraseAll = true;
+    result.newGroupNodes.emplace_back(newLimitGroupNode);
+    return result;
+}
+
+std::string LimitPushDownRule::toString() const {
+    return &quot;LimitPushDownRule&quot;;
+}
+</code></pre>
+<h2 id="5-scheduler-和-executor">5 Scheduler 和 Executor</h2>
+<ul>
+<li>执行引擎通过 Scheduler（调度器）将 Planner 生成的<code>执行计划</code>转换为<code>一系列Executor</code>，驱动 Executor 的执行。</li>
+<li>Executor，即执行器，物理执行计划中的每个 PlanNode 都会对应一个 Executor。</li>
+<li>调度器的源码在 <code>src/scheduler</code> 目录下</li>
+<li>执行器的源码在 <code>src/executor</code> 目录下</li>
+</ul>
+<p>执行过程:</p>
+<ul>
+<li>调度器从Plan树的根节点开始执行</li>
+<li>使用广度优先遍历和执行</li>
+<li>PlanNode之间通过消息通知机制调度，每个PlanNode收到所有依赖节点的消息后开始执行，执行完成后，通知下游节点。</li>
+<li>每个 Executor 会经历 create-open-execute-close 四个阶段：</li>
+</ul>
+
+              </div>
+              <div class="toc-container">
+                <ul class="markdownIt-TOC">
+<li>
+<ul>
+<li><a href="#1-%E6%95%B4%E4%BD%93%E6%B5%81%E7%A8%8B">1 整体流程</a></li>
+<li><a href="#2-parser">2 Parser</a></li>
+<li><a href="#3-validator">3 Validator</a></li>
+<li><a href="#4-optimizer">4 Optimizer</a></li>
+<li><a href="#5-scheduler-%E5%92%8C-executor">5 Scheduler 和 Executor</a></li>
+</ul>
+</li>
+</ul>
+
+              </div>
+            </div>
+          </article>
+        </div>
+
+        
+          <div class="next-post">
+            <div class="next">下一篇</div>
+            <a href="https://tong-hao.github.io/RqfH17RYoi/">
+              <h3 class="post-title">
+                nebula-TTL
+              </h3>
+            </a>
+          </div>
+        
+
+        
+          
+            <link rel="stylesheet" href="https://unpkg.com/gitalk/dist/gitalk.css">
+<script src="https://unpkg.com/gitalk/dist/gitalk.min.js"></script>
+
+<div id="gitalk-container"></div>
+
+<script>
+
+  var gitalk = new Gitalk({
+    clientID: 'Ov23lieprxymzcVgZ0O1',
+    clientSecret: 'a8031fbd8318b584d517fd25242e7c8bdaf1c896',
+    repo: 'tong-hao.github.io',
+    owner: 'tong-hao',
+    admin: ['tong-hao'],
+    id: (location.pathname).substring(0, 49),      // Ensure uniqueness and length less than 50
+    distractionFreeMode: false  // Facebook-like distraction free mode
+  })
+
+  gitalk.render('gitalk-container')
+
+</script>
+
+          
+
+          
+        
+
+        <div class="site-footer">
+  
+  <a class="rss" href="https://tong-hao.github.io/atom.xml" target="_blank">
+    <i class="ri-rss-line"></i> RSS
+  </a>
+</div>
+
+      </div>
+    </div>
+
+    <script>
+      hljs.initHighlightingOnLoad()
+
+      let mainNavLinks = document.querySelectorAll(".markdownIt-TOC a");
+
+      // This should probably be throttled.
+      // Especially because it triggers during smooth scrolling.
+      // https://lodash.com/docs/4.17.10#throttle
+      // You could do like...
+      // window.addEventListener("scroll", () => {
+      //    _.throttle(doThatStuff, 100);
+      // });
+      // Only not doing it here to keep this Pen dependency-free.
+
+      window.addEventListener("scroll", event => {
+        let fromTop = window.scrollY;
+
+        mainNavLinks.forEach((link, index) => {
+          let section = document.getElementById(decodeURI(link.hash).substring(1));
+          let nextSection = null
+          if (mainNavLinks[index + 1]) {
+            nextSection = document.getElementById(decodeURI(mainNavLinks[index + 1].hash).substring(1));
+          }
+          if (section.offsetTop <= fromTop) {
+            if (nextSection) {
+              if (nextSection.offsetTop > fromTop) {
+                link.classList.add("current");
+              } else {
+                link.classList.remove("current");    
+              }
+            } else {
+              link.classList.add("current");
+            }
+          } else {
+            link.classList.remove("current");
+          }
+        });
+      });
+
+    </script>
+  </body>
+</html>

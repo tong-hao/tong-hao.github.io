@@ -1,0 +1,284 @@
+<html>
+  <head>
+    <meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>pg-什么是WAL | Caton Blog</title>
+<link rel="shortcut icon" href="https://tong-hao.github.io/favicon.ico?v=1753690290554">
+<link href="https://cdn.jsdelivr.net/npm/remixicon@2.3.0/fonts/remixicon.css" rel="stylesheet">
+<link rel="stylesheet" href="https://tong-hao.github.io/styles/main.css">
+<link rel="alternate" type="application/atom+xml" title="pg-什么是WAL | Caton Blog - Atom Feed" href="https://tong-hao.github.io/atom.xml">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Droid+Serif:400,700">
+
+
+
+    <meta name="description" content="
+WAL 全称是 Write-Ahead Logging，预写日志
+写WAL的目的：当数据库发生崩溃时，可以根据WAL数据将系统恢复到一致的状态。
+WAL是pg在7.1版本加入的功能
+
+不写WAL的例子
+
+
+当执行第一个insert时，先将..." />
+    <meta name="keywords" content="postgresql" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+    <script src="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.5.1/build/highlight.min.js"></script>
+  </head>
+  <body>
+    <div class="main">
+      <div class="main-content">
+        <div class="site-header">
+  <a href="https://tong-hao.github.io">
+  <img class="avatar" src="https://tong-hao.github.io/images/avatar.png?v=1753690290554" alt="">
+  </a>
+  <h1 class="site-title">
+    Caton Blog
+  </h1>
+  <p class="site-description">
+    ✍️一个专注于数据库的博客
+  </p>
+  <div class="menu-container">
+    
+      
+        <a href="/" class="menu">
+          首页
+        </a>
+      
+    
+      
+        <a href="/about" class="menu">
+          关于
+        </a>
+      
+    
+      
+        <a href="/tags" class="menu">
+          标签
+        </a>
+      
+    
+      
+        <a href="/pg" class="menu">
+          #pg
+        </a>
+      
+    
+      
+        <a href="/db" class="menu">
+          #数据库内核
+        </a>
+      
+    
+      
+        <a href="/graph-db" class="menu">
+          #图数据库
+        </a>
+      
+    
+      
+        <a href="/creation" class="menu">
+          #个人作品
+        </a>
+      
+    
+      
+        <a href="/cpp" class="menu">
+          #c++
+        </a>
+      
+    
+  </div>
+  <div class="social-container">
+    
+      
+        <a href="https://github.com/tong-hao" target="_blank">
+          <i class="ri-github-line"></i>
+        </a>
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+  </div>
+</div>
+
+        <div class="post-detail">
+          <article class="post">
+            <h2 class="post-title">
+              pg-什么是WAL
+            </h2>
+            <div class="post-info">
+              <span>
+                2024-06-11
+              </span>
+              <span>
+                2 min read
+              </span>
+              
+                <a href="https://tong-hao.github.io/pg/" class="post-tag">
+                  # postgresql
+                </a>
+              
+            </div>
+            
+            <div class="post-content-wrapper">
+              <div class="post-content" v-pre>
+                <ul>
+<li>WAL 全称是 Write-Ahead Logging，预写日志</li>
+<li>写WAL的目的：当数据库发生崩溃时，可以根据WAL数据将系统恢复到一致的状态。</li>
+<li>WAL是pg在7.1版本加入的功能</li>
+</ul>
+<h2 id="不写wal的例子">不写WAL的例子</h2>
+<figure data-type="image" tabindex="1"><img src="https://tong-hao.github.io/post-images/1718074885257.png" alt="" loading="lazy"></figure>
+<ul>
+<li>当执行第一个insert时，先将表A的数据从表文件加载到buffer pool中，然后插入到buffer pool中的一个合适的页里</li>
+<li>当执行第二条insert时，还是直接插入到buffer pool中</li>
+<li>当机器停电的时候，我们插入的两条记录就会丢失。因为它并没有保存到磁盘里。</li>
+</ul>
+<h2 id="checkpoint">checkpoint</h2>
+<ul>
+<li>数据恢复需要从某个位置恢复到当前的状态。这个位置就是checkpoint记录。</li>
+<li>有个checkpointer进程，它会定期地在WAL中写一个checkpoint记录，当恢复的时候就从最近的一次位置恢复。</li>
+</ul>
+<h2 id="wal的写入过程">WAL的写入过程</h2>
+<p>pg会将我们的操作记录到一个文件中，在pg中，这个文件是xlog。当系统崩溃的时候，可以从xlog中恢复之前操作记录。这里的操作包括：insert，delete，commit。当事务commit/abort的时候会立即写入到xlog中。</p>
+<p>下面是一个例子：<br>
+<img src="https://tong-hao.github.io/post-images/1718074865585.png" alt="" loading="lazy"></p>
+<ol>
+<li>checkpointer进程在xlog文件中写了一条checkpoint记录</li>
+<li>执行insert语句时，pg会先从表文件中将page加载到buffer pool中，然后在buffer pool的某个page中插入一条记录，再在WAL buffer中写入一条xlog记录</li>
+<li>当执行<code>commit</code>的时候，pg会将commit操作写入到WAL buffer中，然后将WAL buffer中的所有xlog记录写到WAL文件中。</li>
+<li>再次执行insert语句，如同2</li>
+<li>再次执行commit语句，如同3</li>
+<li>当系统crash时，所有的insert都已经保存到了wal文件里</li>
+</ol>
+<h2 id="数据恢复过程">数据恢复过程</h2>
+<figure data-type="image" tabindex="2"><img src="https://tong-hao.github.io/post-images/1718074851230.png" alt="" loading="lazy"></figure>
+<ol>
+<li>从表文件中将page加载到buffer pool里。</li>
+<li>从WAL文件中读取xlog记录，并与表文件page中的LSN做做比较。
+<ul>
+<li>如果xlog的LSN大，则将它插入到buffer pool的page中</li>
+<li>如果xlog的LSN小，则不做任何事情</li>
+</ul>
+</li>
+<li>重复步骤2。<br>
+上面这个过程叫日志回放。</li>
+</ol>
+<p>注意：<br>
+pg只支持redo log，不支持undo log。</p>
+
+              </div>
+              <div class="toc-container">
+                <ul class="markdownIt-TOC">
+<li>
+<ul>
+<li><a href="#%E4%B8%8D%E5%86%99wal%E7%9A%84%E4%BE%8B%E5%AD%90">不写WAL的例子</a></li>
+<li><a href="#checkpoint">checkpoint</a></li>
+<li><a href="#wal%E7%9A%84%E5%86%99%E5%85%A5%E8%BF%87%E7%A8%8B">WAL的写入过程</a></li>
+<li><a href="#%E6%95%B0%E6%8D%AE%E6%81%A2%E5%A4%8D%E8%BF%87%E7%A8%8B">数据恢复过程</a></li>
+</ul>
+</li>
+</ul>
+
+              </div>
+            </div>
+          </article>
+        </div>
+
+        
+          <div class="next-post">
+            <div class="next">下一篇</div>
+            <a href="https://tong-hao.github.io/UVxOVIu1P/">
+              <h3 class="post-title">
+                pg-刷脏
+              </h3>
+            </a>
+          </div>
+        
+
+        
+          
+            <link rel="stylesheet" href="https://unpkg.com/gitalk/dist/gitalk.css">
+<script src="https://unpkg.com/gitalk/dist/gitalk.min.js"></script>
+
+<div id="gitalk-container"></div>
+
+<script>
+
+  var gitalk = new Gitalk({
+    clientID: 'Ov23lieprxymzcVgZ0O1',
+    clientSecret: 'a8031fbd8318b584d517fd25242e7c8bdaf1c896',
+    repo: 'tong-hao.github.io',
+    owner: 'tong-hao',
+    admin: ['tong-hao'],
+    id: (location.pathname).substring(0, 49),      // Ensure uniqueness and length less than 50
+    distractionFreeMode: false  // Facebook-like distraction free mode
+  })
+
+  gitalk.render('gitalk-container')
+
+</script>
+
+          
+
+          
+        
+
+        <div class="site-footer">
+  
+  <a class="rss" href="https://tong-hao.github.io/atom.xml" target="_blank">
+    <i class="ri-rss-line"></i> RSS
+  </a>
+</div>
+
+      </div>
+    </div>
+
+    <script>
+      hljs.initHighlightingOnLoad()
+
+      let mainNavLinks = document.querySelectorAll(".markdownIt-TOC a");
+
+      // This should probably be throttled.
+      // Especially because it triggers during smooth scrolling.
+      // https://lodash.com/docs/4.17.10#throttle
+      // You could do like...
+      // window.addEventListener("scroll", () => {
+      //    _.throttle(doThatStuff, 100);
+      // });
+      // Only not doing it here to keep this Pen dependency-free.
+
+      window.addEventListener("scroll", event => {
+        let fromTop = window.scrollY;
+
+        mainNavLinks.forEach((link, index) => {
+          let section = document.getElementById(decodeURI(link.hash).substring(1));
+          let nextSection = null
+          if (mainNavLinks[index + 1]) {
+            nextSection = document.getElementById(decodeURI(mainNavLinks[index + 1].hash).substring(1));
+          }
+          if (section.offsetTop <= fromTop) {
+            if (nextSection) {
+              if (nextSection.offsetTop > fromTop) {
+                link.classList.add("current");
+              } else {
+                link.classList.remove("current");    
+              }
+            } else {
+              link.classList.add("current");
+            }
+          } else {
+            link.classList.remove("current");
+          }
+        });
+      });
+
+    </script>
+  </body>
+</html>

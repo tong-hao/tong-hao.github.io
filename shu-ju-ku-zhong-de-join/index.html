@@ -1,0 +1,280 @@
+<html>
+  <head>
+    <meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>数据库中的Join | Caton Blog</title>
+<link rel="shortcut icon" href="https://tong-hao.github.io/favicon.ico?v=1753690290554">
+<link href="https://cdn.jsdelivr.net/npm/remixicon@2.3.0/fonts/remixicon.css" rel="stylesheet">
+<link rel="stylesheet" href="https://tong-hao.github.io/styles/main.css">
+<link rel="alternate" type="application/atom+xml" title="数据库中的Join | Caton Blog - Atom Feed" href="https://tong-hao.github.io/atom.xml">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Droid+Serif:400,700">
+
+
+
+    <meta name="description" content="嵌套循环 Join (Nested Loop Join)
+
+特点：简单、效率低
+原理：左表的每一行,都会与右表的每一行进行比较
+
+索引嵌套循环 Join (Index Nested Loop Join)
+
+原理：利用右表的索引,减少了对右表..." />
+    <meta name="keywords" content="数据库" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+    <script src="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.5.1/build/highlight.min.js"></script>
+  </head>
+  <body>
+    <div class="main">
+      <div class="main-content">
+        <div class="site-header">
+  <a href="https://tong-hao.github.io">
+  <img class="avatar" src="https://tong-hao.github.io/images/avatar.png?v=1753690290554" alt="">
+  </a>
+  <h1 class="site-title">
+    Caton Blog
+  </h1>
+  <p class="site-description">
+    ✍️一个专注于数据库的博客
+  </p>
+  <div class="menu-container">
+    
+      
+        <a href="/" class="menu">
+          首页
+        </a>
+      
+    
+      
+        <a href="/about" class="menu">
+          关于
+        </a>
+      
+    
+      
+        <a href="/tags" class="menu">
+          标签
+        </a>
+      
+    
+      
+        <a href="/pg" class="menu">
+          #pg
+        </a>
+      
+    
+      
+        <a href="/db" class="menu">
+          #数据库内核
+        </a>
+      
+    
+      
+        <a href="/graph-db" class="menu">
+          #图数据库
+        </a>
+      
+    
+      
+        <a href="/creation" class="menu">
+          #个人作品
+        </a>
+      
+    
+      
+        <a href="/cpp" class="menu">
+          #c++
+        </a>
+      
+    
+  </div>
+  <div class="social-container">
+    
+      
+        <a href="https://github.com/tong-hao" target="_blank">
+          <i class="ri-github-line"></i>
+        </a>
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+  </div>
+</div>
+
+        <div class="post-detail">
+          <article class="post">
+            <h2 class="post-title">
+              数据库中的Join
+            </h2>
+            <div class="post-info">
+              <span>
+                2024-06-01
+              </span>
+              <span>
+                2 min read
+              </span>
+              
+                <a href="https://tong-hao.github.io/db/" class="post-tag">
+                  # 数据库
+                </a>
+              
+            </div>
+            
+            <div class="post-content-wrapper">
+              <div class="post-content" v-pre>
+                <h2 id="嵌套循环-join-nested-loop-join">嵌套循环 Join (Nested Loop Join)</h2>
+<ul>
+<li>特点：简单、效率低</li>
+<li>原理：左表的每一行,都会与右表的每一行进行比较</li>
+</ul>
+<h2 id="索引嵌套循环-join-index-nested-loop-join">索引嵌套循环 Join (Index Nested Loop Join)</h2>
+<ul>
+<li>原理：利用右表的索引,减少了对右表的扫描次数,从而提高了性能</li>
+<li>前提：右表 必须创建索引</li>
+</ul>
+<h2 id="缓存块嵌套循环-join-block-nested-loop-join">缓存块嵌套循环 Join (Block Nested Loop Join)</h2>
+<ul>
+<li>原理：将左表的部分数据缓存到Buffer中，对右边进行全量扫描</li>
+</ul>
+<h2 id="sort-merge-join">Sort-Merge Join</h2>
+<ul>
+<li>算法分两步：排序和合并</li>
+<li>排序：对两张表分别排序</li>
+<li>合并：同双指针逻辑。指针1指向表1，指针2指向表2，比较指针1和指针2的大小，如果相等放入结果集，如果指针1或2小，则下一条纪录。</li>
+</ul>
+<h2 id="hash-join">Hash join</h2>
+<ul>
+<li>两个阶段
+<ul>
+<li>构建阶段：将左表存入hash table中</li>
+<li>探测阶段：扫描右表，并利用hash table中的数据与左表做关联。</li>
+</ul>
+</li>
+</ul>
+<h2 id="向量化-hash-join">向量化 hash join</h2>
+<ul>
+<li>是hash join的一种升级</li>
+<li>两个阶段
+<ul>
+<li>构建阶段：将左表存入hash table中。利用 SIMD 指令对 Hash 冲突的处理进行向量化。</li>
+<li>探测阶段：扫描右表，并利用SIMD指令在hash table中的匹配查找。</li>
+</ul>
+</li>
+</ul>
+
+              </div>
+              <div class="toc-container">
+                <ul class="markdownIt-TOC">
+<li>
+<ul>
+<li><a href="#%E5%B5%8C%E5%A5%97%E5%BE%AA%E7%8E%AF-join-nested-loop-join">嵌套循环 Join (Nested Loop Join)</a></li>
+<li><a href="#%E7%B4%A2%E5%BC%95%E5%B5%8C%E5%A5%97%E5%BE%AA%E7%8E%AF-join-index-nested-loop-join">索引嵌套循环 Join (Index Nested Loop Join)</a></li>
+<li><a href="#%E7%BC%93%E5%AD%98%E5%9D%97%E5%B5%8C%E5%A5%97%E5%BE%AA%E7%8E%AF-join-block-nested-loop-join">缓存块嵌套循环 Join (Block Nested Loop Join)</a></li>
+<li><a href="#sort-merge-join">Sort-Merge Join</a></li>
+<li><a href="#hash-join">Hash join</a></li>
+<li><a href="#%E5%90%91%E9%87%8F%E5%8C%96-hash-join">向量化 hash join</a></li>
+</ul>
+</li>
+</ul>
+
+              </div>
+            </div>
+          </article>
+        </div>
+
+        
+          <div class="next-post">
+            <div class="next">下一篇</div>
+            <a href="https://tong-hao.github.io/shi-wu-de-ge-chi-ji-bie/">
+              <h3 class="post-title">
+                事务的隔离级别
+              </h3>
+            </a>
+          </div>
+        
+
+        
+          
+            <link rel="stylesheet" href="https://unpkg.com/gitalk/dist/gitalk.css">
+<script src="https://unpkg.com/gitalk/dist/gitalk.min.js"></script>
+
+<div id="gitalk-container"></div>
+
+<script>
+
+  var gitalk = new Gitalk({
+    clientID: 'Ov23lieprxymzcVgZ0O1',
+    clientSecret: 'a8031fbd8318b584d517fd25242e7c8bdaf1c896',
+    repo: 'tong-hao.github.io',
+    owner: 'tong-hao',
+    admin: ['tong-hao'],
+    id: (location.pathname).substring(0, 49),      // Ensure uniqueness and length less than 50
+    distractionFreeMode: false  // Facebook-like distraction free mode
+  })
+
+  gitalk.render('gitalk-container')
+
+</script>
+
+          
+
+          
+        
+
+        <div class="site-footer">
+  
+  <a class="rss" href="https://tong-hao.github.io/atom.xml" target="_blank">
+    <i class="ri-rss-line"></i> RSS
+  </a>
+</div>
+
+      </div>
+    </div>
+
+    <script>
+      hljs.initHighlightingOnLoad()
+
+      let mainNavLinks = document.querySelectorAll(".markdownIt-TOC a");
+
+      // This should probably be throttled.
+      // Especially because it triggers during smooth scrolling.
+      // https://lodash.com/docs/4.17.10#throttle
+      // You could do like...
+      // window.addEventListener("scroll", () => {
+      //    _.throttle(doThatStuff, 100);
+      // });
+      // Only not doing it here to keep this Pen dependency-free.
+
+      window.addEventListener("scroll", event => {
+        let fromTop = window.scrollY;
+
+        mainNavLinks.forEach((link, index) => {
+          let section = document.getElementById(decodeURI(link.hash).substring(1));
+          let nextSection = null
+          if (mainNavLinks[index + 1]) {
+            nextSection = document.getElementById(decodeURI(mainNavLinks[index + 1].hash).substring(1));
+          }
+          if (section.offsetTop <= fromTop) {
+            if (nextSection) {
+              if (nextSection.offsetTop > fromTop) {
+                link.classList.add("current");
+              } else {
+                link.classList.remove("current");    
+              }
+            } else {
+              link.classList.add("current");
+            }
+          } else {
+            link.classList.remove("current");
+          }
+        });
+      });
+
+    </script>
+  </body>
+</html>

@@ -1,0 +1,265 @@
+<html>
+  <head>
+    <meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>pg-autovacuum daemon | Caton Blog</title>
+<link rel="shortcut icon" href="https://tong-hao.github.io/favicon.ico?v=1753690290554">
+<link href="https://cdn.jsdelivr.net/npm/remixicon@2.3.0/fonts/remixicon.css" rel="stylesheet">
+<link rel="stylesheet" href="https://tong-hao.github.io/styles/main.css">
+<link rel="alternate" type="application/atom+xml" title="pg-autovacuum daemon | Caton Blog - Atom Feed" href="https://tong-hao.github.io/atom.xml">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Droid+Serif:400,700">
+
+
+
+    <meta name="description" content="
+autovacuum会定期的拉起n个工作进程进行处理。
+定期的时长间隔是通过autovacuum_naptime 配置的。
+工作进程的数量是通过autovacuum_max_works 配置的。
+不是每个表都需要进行vacuum清理的，需..." />
+    <meta name="keywords" content="postgresql" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+    <script src="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.5.1/build/highlight.min.js"></script>
+  </head>
+  <body>
+    <div class="main">
+      <div class="main-content">
+        <div class="site-header">
+  <a href="https://tong-hao.github.io">
+  <img class="avatar" src="https://tong-hao.github.io/images/avatar.png?v=1753690290554" alt="">
+  </a>
+  <h1 class="site-title">
+    Caton Blog
+  </h1>
+  <p class="site-description">
+    ✍️一个专注于数据库的博客
+  </p>
+  <div class="menu-container">
+    
+      
+        <a href="/" class="menu">
+          首页
+        </a>
+      
+    
+      
+        <a href="/about" class="menu">
+          关于
+        </a>
+      
+    
+      
+        <a href="/tags" class="menu">
+          标签
+        </a>
+      
+    
+      
+        <a href="/pg" class="menu">
+          #pg
+        </a>
+      
+    
+      
+        <a href="/db" class="menu">
+          #数据库内核
+        </a>
+      
+    
+      
+        <a href="/graph-db" class="menu">
+          #图数据库
+        </a>
+      
+    
+      
+        <a href="/creation" class="menu">
+          #个人作品
+        </a>
+      
+    
+      
+        <a href="/cpp" class="menu">
+          #c++
+        </a>
+      
+    
+  </div>
+  <div class="social-container">
+    
+      
+        <a href="https://github.com/tong-hao" target="_blank">
+          <i class="ri-github-line"></i>
+        </a>
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+  </div>
+</div>
+
+        <div class="post-detail">
+          <article class="post">
+            <h2 class="post-title">
+              pg-autovacuum daemon
+            </h2>
+            <div class="post-info">
+              <span>
+                2024-06-11
+              </span>
+              <span>
+                2 min read
+              </span>
+              
+                <a href="https://tong-hao.github.io/pg/" class="post-tag">
+                  # postgresql
+                </a>
+              
+            </div>
+            
+            <div class="post-content-wrapper">
+              <div class="post-content" v-pre>
+                <ul>
+<li>autovacuum会定期的拉起n个工作进程进行处理。</li>
+<li>定期的时长间隔是通过autovacuum_naptime 配置的。</li>
+<li>工作进程的数量是通过autovacuum_max_works 配置的。</li>
+<li>不是每个表都需要进行vacuum清理的，需要满足一些条件才进行清理。</li>
+</ul>
+<p>检查某个表是否需要进行vacuum清理的条件：</p>
+<ul>
+<li>current txid &gt; relfrozenxid + autovacuum_freeze_max_age
+<ul>
+<li><strong>relfrozenxid</strong>：这是表的当前冻结XID，存储在系统表 <code>pg_class</code> 中。它表示该表中所有数据行的XID都小于或等于这个值。</li>
+<li><strong>autovacuum_freeze_max_age</strong>：这是一个配置参数，默认值为200,000,000。它表示在多少个事务之后需要进行冻结处理。</li>
+</ul>
+</li>
+<li><code>dead tuples &gt; autovacuum_vacuum_threshold+autovacuum_vacuum_scale_factor×reltuples</code>
+<ul>
+<li>dead tuples 该表中有多少个dead tuples。</li>
+<li>autovacuum_vacuum_threshold默认配置的是50</li>
+<li>autovacuum_vacuum_scale_factor默认配置的0.2</li>
+<li>reltuples是表中记录的数量</li>
+</ul>
+</li>
+<li><code>insert tuples &gt; autovacuum_vacuum_insert_threshold+autovacuum_vacuum_insert_scale_factor×reltuples</code>
+<ul>
+<li>insert tuples该表中插入的tuple有多少个</li>
+<li><a href="https://www.postgresql.org/docs/current/runtime-config-autovacuum.html#GUC-AUTOVACUUM-VACUUM-INSERT-THRESHOLD">autovacuum_vacuum_insert_threshold</a> (the default is 1000)</li>
+<li><a href="https://www.postgresql.org/docs/current/runtime-config-autovacuum.html#GUC-AUTOVACUUM-VACUUM-INSERT-SCALE-FACTOR">autovacuum_vacuum_insert_scale_factor</a> (the default is 0.2)</li>
+<li>reltuples是表中记录的数量</li>
+</ul>
+</li>
+<li><code>mod_since_analyze &gt; autovacuum_analyze_threshold + autovacuum_analyze_scale_factor x reltuples</code>
+<ul>
+<li>mod_since_analyze 是从上一次分析时的修改的记录数量</li>
+<li><a href="https://www.postgresql.org/docs/current/runtime-config-autovacuum.html#GUC-AUTOVACUUM-ANALYZE-THRESHOLD">autovacuum_analyze_threshold</a> (the default is 50)</li>
+<li><a href="https://www.postgresql.org/docs/current/runtime-config-autovacuum.html#GUC-AUTOVACUUM-ANALYZE-SCALE-FACTOR">autovacuum_analyze_scale_factor</a> (the default is 0.1)</li>
+<li>reltuples是表中记录的数量</li>
+</ul>
+</li>
+</ul>
+
+              </div>
+              <div class="toc-container">
+                
+              </div>
+            </div>
+          </article>
+        </div>
+
+        
+          <div class="next-post">
+            <div class="next">下一篇</div>
+            <a href="https://tong-hao.github.io/CrlG2x5xA/">
+              <h3 class="post-title">
+                pg-vacuum的两种方式
+              </h3>
+            </a>
+          </div>
+        
+
+        
+          
+            <link rel="stylesheet" href="https://unpkg.com/gitalk/dist/gitalk.css">
+<script src="https://unpkg.com/gitalk/dist/gitalk.min.js"></script>
+
+<div id="gitalk-container"></div>
+
+<script>
+
+  var gitalk = new Gitalk({
+    clientID: 'Ov23lieprxymzcVgZ0O1',
+    clientSecret: 'a8031fbd8318b584d517fd25242e7c8bdaf1c896',
+    repo: 'tong-hao.github.io',
+    owner: 'tong-hao',
+    admin: ['tong-hao'],
+    id: (location.pathname).substring(0, 49),      // Ensure uniqueness and length less than 50
+    distractionFreeMode: false  // Facebook-like distraction free mode
+  })
+
+  gitalk.render('gitalk-container')
+
+</script>
+
+          
+
+          
+        
+
+        <div class="site-footer">
+  
+  <a class="rss" href="https://tong-hao.github.io/atom.xml" target="_blank">
+    <i class="ri-rss-line"></i> RSS
+  </a>
+</div>
+
+      </div>
+    </div>
+
+    <script>
+      hljs.initHighlightingOnLoad()
+
+      let mainNavLinks = document.querySelectorAll(".markdownIt-TOC a");
+
+      // This should probably be throttled.
+      // Especially because it triggers during smooth scrolling.
+      // https://lodash.com/docs/4.17.10#throttle
+      // You could do like...
+      // window.addEventListener("scroll", () => {
+      //    _.throttle(doThatStuff, 100);
+      // });
+      // Only not doing it here to keep this Pen dependency-free.
+
+      window.addEventListener("scroll", event => {
+        let fromTop = window.scrollY;
+
+        mainNavLinks.forEach((link, index) => {
+          let section = document.getElementById(decodeURI(link.hash).substring(1));
+          let nextSection = null
+          if (mainNavLinks[index + 1]) {
+            nextSection = document.getElementById(decodeURI(mainNavLinks[index + 1].hash).substring(1));
+          }
+          if (section.offsetTop <= fromTop) {
+            if (nextSection) {
+              if (nextSection.offsetTop > fromTop) {
+                link.classList.add("current");
+              } else {
+                link.classList.remove("current");    
+              }
+            } else {
+              link.classList.add("current");
+            }
+          } else {
+            link.classList.remove("current");
+          }
+        });
+      });
+
+    </script>
+  </body>
+</html>

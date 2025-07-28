@@ -1,0 +1,284 @@
+<html>
+  <head>
+    <meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>存储结构CSR_CSC | Caton Blog</title>
+<link rel="shortcut icon" href="https://tong-hao.github.io/favicon.ico?v=1753690290554">
+<link href="https://cdn.jsdelivr.net/npm/remixicon@2.3.0/fonts/remixicon.css" rel="stylesheet">
+<link rel="stylesheet" href="https://tong-hao.github.io/styles/main.css">
+<link rel="alternate" type="application/atom+xml" title="存储结构CSR_CSC | Caton Blog - Atom Feed" href="https://tong-hao.github.io/atom.xml">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Droid+Serif:400,700">
+
+
+
+    <meta name="description" content="
+图的存储介质：内存、外存
+图的存储方式：邻接矩阵、邻接表、CSR/CSC
+
+一张图
+
+邻接矩阵表示方法
+
+邻接表表示方法
+
+CSR/CSC
+
+
+
+计算出边数量
+通过offset计算出边的数量以及出边的位置：比如顶点3，offset[3] ..." />
+    <meta name="keywords" content="存储结构,图计算" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+    <script src="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.5.1/build/highlight.min.js"></script>
+  </head>
+  <body>
+    <div class="main">
+      <div class="main-content">
+        <div class="site-header">
+  <a href="https://tong-hao.github.io">
+  <img class="avatar" src="https://tong-hao.github.io/images/avatar.png?v=1753690290554" alt="">
+  </a>
+  <h1 class="site-title">
+    Caton Blog
+  </h1>
+  <p class="site-description">
+    ✍️一个专注于数据库的博客
+  </p>
+  <div class="menu-container">
+    
+      
+        <a href="/" class="menu">
+          首页
+        </a>
+      
+    
+      
+        <a href="/about" class="menu">
+          关于
+        </a>
+      
+    
+      
+        <a href="/tags" class="menu">
+          标签
+        </a>
+      
+    
+      
+        <a href="/pg" class="menu">
+          #pg
+        </a>
+      
+    
+      
+        <a href="/db" class="menu">
+          #数据库内核
+        </a>
+      
+    
+      
+        <a href="/graph-db" class="menu">
+          #图数据库
+        </a>
+      
+    
+      
+        <a href="/creation" class="menu">
+          #个人作品
+        </a>
+      
+    
+      
+        <a href="/cpp" class="menu">
+          #c++
+        </a>
+      
+    
+  </div>
+  <div class="social-container">
+    
+      
+        <a href="https://github.com/tong-hao" target="_blank">
+          <i class="ri-github-line"></i>
+        </a>
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+  </div>
+</div>
+
+        <div class="post-detail">
+          <article class="post">
+            <h2 class="post-title">
+              存储结构CSR_CSC
+            </h2>
+            <div class="post-info">
+              <span>
+                2024-06-01
+              </span>
+              <span>
+                1 min read
+              </span>
+              
+                <a href="https://tong-hao.github.io/Eo_zQ9ryw/" class="post-tag">
+                  # 存储结构
+                </a>
+              
+                <a href="https://tong-hao.github.io/graph-computer/" class="post-tag">
+                  # 图计算
+                </a>
+              
+            </div>
+            
+            <div class="post-content-wrapper">
+              <div class="post-content" v-pre>
+                <ul>
+<li>图的存储介质：内存、外存</li>
+<li>图的存储方式：邻接矩阵、邻接表、CSR/CSC</li>
+</ul>
+<h2 id="一张图">一张图</h2>
+<figure data-type="image" tabindex="1"><img src="https://tong-hao.github.io/post-images/1717209976222.webp" alt="" loading="lazy"></figure>
+<h2 id="邻接矩阵表示方法">邻接矩阵表示方法</h2>
+<figure data-type="image" tabindex="2"><img src="https://tong-hao.github.io/post-images/1717209991108.webp" alt="" loading="lazy"></figure>
+<h2 id="邻接表表示方法">邻接表表示方法</h2>
+<figure data-type="image" tabindex="3"><img src="https://tong-hao.github.io/post-images/1717210008479.webp" alt="" loading="lazy"></figure>
+<h2 id="csrcsc">CSR/CSC</h2>
+<figure data-type="image" tabindex="4"><img src="https://tong-hao.github.io/post-images/1717210030022.webp" alt="" loading="lazy"></figure>
+<ol>
+<li>
+<p>计算出边数量<br>
+通过offset计算出边的数量以及出边的位置：比如顶点3，<code>offset[3] - offset[2] = 8 - 6 = 2 </code>表示顶点3有两条出边，</p>
+</li>
+<li>
+<p>获取邻居<br>
+通过nbrs计算出边的邻居：顶点3的邻居为 <code>nbrs[offset[2]] 到 nbrs[offset[3]] </code>为出边【左闭右开】</p>
+</li>
+<li>
+<p>获取权重<br>
+通过weights计算边上的权重：顶点3的邻居权重为<code> weights[offset[2]] 到 nbrs[offset[3]]</code>【左闭右开】</p>
+</li>
+</ol>
+<h2 id="plato中的csr">plato中的csr</h2>
+<p><code>bcsr.hpp</code></p>
+<pre><code>  std::shared_ptr&lt;bitmap_spec_t&gt; bitmap_;
+  std::shared_ptr&lt;adj_unit_spec_t&gt; adjs_;
+  std::shared_ptr&lt;eid_t&gt; index_;
+</code></pre>
+
+              </div>
+              <div class="toc-container">
+                <ul class="markdownIt-TOC">
+<li>
+<ul>
+<li><a href="#%E4%B8%80%E5%BC%A0%E5%9B%BE">一张图</a></li>
+<li><a href="#%E9%82%BB%E6%8E%A5%E7%9F%A9%E9%98%B5%E8%A1%A8%E7%A4%BA%E6%96%B9%E6%B3%95">邻接矩阵表示方法</a></li>
+<li><a href="#%E9%82%BB%E6%8E%A5%E8%A1%A8%E8%A1%A8%E7%A4%BA%E6%96%B9%E6%B3%95">邻接表表示方法</a></li>
+<li><a href="#csrcsc">CSR/CSC</a></li>
+<li><a href="#plato%E4%B8%AD%E7%9A%84csr">plato中的csr</a></li>
+</ul>
+</li>
+</ul>
+
+              </div>
+            </div>
+          </article>
+        </div>
+
+        
+          <div class="next-post">
+            <div class="next">下一篇</div>
+            <a href="https://tong-hao.github.io/oA8AcYhNi/">
+              <h3 class="post-title">
+                pg学习资料
+              </h3>
+            </a>
+          </div>
+        
+
+        
+          
+            <link rel="stylesheet" href="https://unpkg.com/gitalk/dist/gitalk.css">
+<script src="https://unpkg.com/gitalk/dist/gitalk.min.js"></script>
+
+<div id="gitalk-container"></div>
+
+<script>
+
+  var gitalk = new Gitalk({
+    clientID: 'Ov23lieprxymzcVgZ0O1',
+    clientSecret: 'a8031fbd8318b584d517fd25242e7c8bdaf1c896',
+    repo: 'tong-hao.github.io',
+    owner: 'tong-hao',
+    admin: ['tong-hao'],
+    id: (location.pathname).substring(0, 49),      // Ensure uniqueness and length less than 50
+    distractionFreeMode: false  // Facebook-like distraction free mode
+  })
+
+  gitalk.render('gitalk-container')
+
+</script>
+
+          
+
+          
+        
+
+        <div class="site-footer">
+  
+  <a class="rss" href="https://tong-hao.github.io/atom.xml" target="_blank">
+    <i class="ri-rss-line"></i> RSS
+  </a>
+</div>
+
+      </div>
+    </div>
+
+    <script>
+      hljs.initHighlightingOnLoad()
+
+      let mainNavLinks = document.querySelectorAll(".markdownIt-TOC a");
+
+      // This should probably be throttled.
+      // Especially because it triggers during smooth scrolling.
+      // https://lodash.com/docs/4.17.10#throttle
+      // You could do like...
+      // window.addEventListener("scroll", () => {
+      //    _.throttle(doThatStuff, 100);
+      // });
+      // Only not doing it here to keep this Pen dependency-free.
+
+      window.addEventListener("scroll", event => {
+        let fromTop = window.scrollY;
+
+        mainNavLinks.forEach((link, index) => {
+          let section = document.getElementById(decodeURI(link.hash).substring(1));
+          let nextSection = null
+          if (mainNavLinks[index + 1]) {
+            nextSection = document.getElementById(decodeURI(mainNavLinks[index + 1].hash).substring(1));
+          }
+          if (section.offsetTop <= fromTop) {
+            if (nextSection) {
+              if (nextSection.offsetTop > fromTop) {
+                link.classList.add("current");
+              } else {
+                link.classList.remove("current");    
+              }
+            } else {
+              link.classList.add("current");
+            }
+          } else {
+            link.classList.remove("current");
+          }
+        });
+      });
+
+    </script>
+  </body>
+</html>

@@ -1,0 +1,292 @@
+<html>
+  <head>
+    <meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>doris-数据的读取 | Caton Blog</title>
+<link rel="shortcut icon" href="https://tong-hao.github.io/favicon.ico?v=1753690290554">
+<link href="https://cdn.jsdelivr.net/npm/remixicon@2.3.0/fonts/remixicon.css" rel="stylesheet">
+<link rel="stylesheet" href="https://tong-hao.github.io/styles/main.css">
+<link rel="alternate" type="application/atom+xml" title="doris-数据的读取 | Caton Blog - Atom Feed" href="https://tong-hao.github.io/atom.xml">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Droid+Serif:400,700">
+
+
+
+    <meta name="description" content="
+基础概念
+
+Tablet 分桶
+Rowset 版本数据
+Segment 是文件系统中的一个文件，256M，会拆成多个page
+Page 是一个逻辑概念
+
+
+Doris数据读取流程
+
+Reader-&gt; RowsetReader -&g..." />
+    <meta name="keywords" content="doris" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+    <script src="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.5.1/build/highlight.min.js"></script>
+  </head>
+  <body>
+    <div class="main">
+      <div class="main-content">
+        <div class="site-header">
+  <a href="https://tong-hao.github.io">
+  <img class="avatar" src="https://tong-hao.github.io/images/avatar.png?v=1753690290554" alt="">
+  </a>
+  <h1 class="site-title">
+    Caton Blog
+  </h1>
+  <p class="site-description">
+    ✍️一个专注于数据库的博客
+  </p>
+  <div class="menu-container">
+    
+      
+        <a href="/" class="menu">
+          首页
+        </a>
+      
+    
+      
+        <a href="/about" class="menu">
+          关于
+        </a>
+      
+    
+      
+        <a href="/tags" class="menu">
+          标签
+        </a>
+      
+    
+      
+        <a href="/pg" class="menu">
+          #pg
+        </a>
+      
+    
+      
+        <a href="/db" class="menu">
+          #数据库内核
+        </a>
+      
+    
+      
+        <a href="/graph-db" class="menu">
+          #图数据库
+        </a>
+      
+    
+      
+        <a href="/creation" class="menu">
+          #个人作品
+        </a>
+      
+    
+      
+        <a href="/cpp" class="menu">
+          #c++
+        </a>
+      
+    
+  </div>
+  <div class="social-container">
+    
+      
+        <a href="https://github.com/tong-hao" target="_blank">
+          <i class="ri-github-line"></i>
+        </a>
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+  </div>
+</div>
+
+        <div class="post-detail">
+          <article class="post">
+            <h2 class="post-title">
+              doris-数据的读取
+            </h2>
+            <div class="post-info">
+              <span>
+                2024-07-19
+              </span>
+              <span>
+                1 min read
+              </span>
+              
+                <a href="https://tong-hao.github.io/doris/" class="post-tag">
+                  # doris
+                </a>
+              
+            </div>
+            
+            <div class="post-content-wrapper">
+              <div class="post-content" v-pre>
+                <ul>
+<li>基础概念
+<ul>
+<li>Tablet 分桶</li>
+<li>Rowset 版本数据</li>
+<li>Segment 是文件系统中的一个文件，256M，会拆成多个page</li>
+<li>Page 是一个逻辑概念</li>
+</ul>
+</li>
+<li>Doris数据读取流程
+<ul>
+<li><code>Reader</code>-&gt; <code>RowsetReader</code> -&gt; <code>SegmentIterator</code></li>
+<li><img src="https://tong-hao.github.io/post-images/1721367948244.png" alt="" loading="lazy"></li>
+<li>Reader相当于一个表</li>
+<li><code>TupleReader</code>
+<ul>
+<li><code>_direct_next_row</code>  key不排序</li>
+<li><code>_agg_key_next_row</code> key是排序的，可以用于做聚合</li>
+<li><code>_unique_key_next_row</code> key去重</li>
+</ul>
+</li>
+<li><code>CollectIterator</code></li>
+<li><code>RowSetReader</code></li>
+<li><img src="https://tong-hao.github.io/post-images/1721367964487.png" alt="" loading="lazy"></li>
+</ul>
+</li>
+<li>page的结构
+<ul>
+<li><img src="https://tong-hao.github.io/post-images/1721367979430.png" alt="" loading="lazy"></li>
+<li>类型：IndexPage/DataPage/DictionaryPage/ShortKeyPage</li>
+<li>压缩：LZ4、LZ4f、Snappy、Zlib</li>
+</ul>
+</li>
+<li><code>PageCache</code>
+<ul>
+<li>类型：<code>IndexPage</code>, <code>DataPage</code></li>
+<li>策略：LRUCache</li>
+<li>配置：
+<ul>
+<li>storage_page_cache_limit</li>
+<li>index_page_cache_percentage</li>
+<li>disable_storage_page_cache</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>Cache存储
+<ul>
+<li>CacheKey：文件名+offset</li>
+<li>内存结构：双向链表</li>
+<li>引用计数的CacheHandle</li>
+<li>Cache优先级：Normal/Durable
+<ul>
+<li>如果表为in_memmory，PageCache为Durable</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+              </div>
+              <div class="toc-container">
+                
+              </div>
+            </div>
+          </article>
+        </div>
+
+        
+          <div class="next-post">
+            <div class="next">下一篇</div>
+            <a href="https://tong-hao.github.io/Hxe-2kCjz/">
+              <h3 class="post-title">
+                doris-FE与BE的任务交互
+              </h3>
+            </a>
+          </div>
+        
+
+        
+          
+            <link rel="stylesheet" href="https://unpkg.com/gitalk/dist/gitalk.css">
+<script src="https://unpkg.com/gitalk/dist/gitalk.min.js"></script>
+
+<div id="gitalk-container"></div>
+
+<script>
+
+  var gitalk = new Gitalk({
+    clientID: 'Ov23lieprxymzcVgZ0O1',
+    clientSecret: 'a8031fbd8318b584d517fd25242e7c8bdaf1c896',
+    repo: 'tong-hao.github.io',
+    owner: 'tong-hao',
+    admin: ['tong-hao'],
+    id: (location.pathname).substring(0, 49),      // Ensure uniqueness and length less than 50
+    distractionFreeMode: false  // Facebook-like distraction free mode
+  })
+
+  gitalk.render('gitalk-container')
+
+</script>
+
+          
+
+          
+        
+
+        <div class="site-footer">
+  
+  <a class="rss" href="https://tong-hao.github.io/atom.xml" target="_blank">
+    <i class="ri-rss-line"></i> RSS
+  </a>
+</div>
+
+      </div>
+    </div>
+
+    <script>
+      hljs.initHighlightingOnLoad()
+
+      let mainNavLinks = document.querySelectorAll(".markdownIt-TOC a");
+
+      // This should probably be throttled.
+      // Especially because it triggers during smooth scrolling.
+      // https://lodash.com/docs/4.17.10#throttle
+      // You could do like...
+      // window.addEventListener("scroll", () => {
+      //    _.throttle(doThatStuff, 100);
+      // });
+      // Only not doing it here to keep this Pen dependency-free.
+
+      window.addEventListener("scroll", event => {
+        let fromTop = window.scrollY;
+
+        mainNavLinks.forEach((link, index) => {
+          let section = document.getElementById(decodeURI(link.hash).substring(1));
+          let nextSection = null
+          if (mainNavLinks[index + 1]) {
+            nextSection = document.getElementById(decodeURI(mainNavLinks[index + 1].hash).substring(1));
+          }
+          if (section.offsetTop <= fromTop) {
+            if (nextSection) {
+              if (nextSection.offsetTop > fromTop) {
+                link.classList.add("current");
+              } else {
+                link.classList.remove("current");    
+              }
+            } else {
+              link.classList.add("current");
+            }
+          } else {
+            link.classList.remove("current");
+          }
+        });
+      });
+
+    </script>
+  </body>
+</html>

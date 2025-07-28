@@ -1,0 +1,311 @@
+<html>
+  <head>
+    <meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>doris-元数据 | Caton Blog</title>
+<link rel="shortcut icon" href="https://tong-hao.github.io/favicon.ico?v=1753690290554">
+<link href="https://cdn.jsdelivr.net/npm/remixicon@2.3.0/fonts/remixicon.css" rel="stylesheet">
+<link rel="stylesheet" href="https://tong-hao.github.io/styles/main.css">
+<link rel="alternate" type="application/atom+xml" title="doris-元数据 | Caton Blog - Atom Feed" href="https://tong-hao.github.io/atom.xml">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Droid+Serif:400,700">
+
+
+
+    <meta name="description" content="元数据目录
+
+
+doris的元数据采用的bdb(Berkeley DB)存储的，是kv存储
+bdb可以理解为元数据的元数据
+image目录才是doris的元数据信息
+
+image.xxx是元数据的镜像数据
+ROLE是角色数据
+VERSION..." />
+    <meta name="keywords" content="doris" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+    <script src="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.5.1/build/highlight.min.js"></script>
+  </head>
+  <body>
+    <div class="main">
+      <div class="main-content">
+        <div class="site-header">
+  <a href="https://tong-hao.github.io">
+  <img class="avatar" src="https://tong-hao.github.io/images/avatar.png?v=1753690290554" alt="">
+  </a>
+  <h1 class="site-title">
+    Caton Blog
+  </h1>
+  <p class="site-description">
+    ✍️一个专注于数据库的博客
+  </p>
+  <div class="menu-container">
+    
+      
+        <a href="/" class="menu">
+          首页
+        </a>
+      
+    
+      
+        <a href="/about" class="menu">
+          关于
+        </a>
+      
+    
+      
+        <a href="/tags" class="menu">
+          标签
+        </a>
+      
+    
+      
+        <a href="/pg" class="menu">
+          #pg
+        </a>
+      
+    
+      
+        <a href="/db" class="menu">
+          #数据库内核
+        </a>
+      
+    
+      
+        <a href="/graph-db" class="menu">
+          #图数据库
+        </a>
+      
+    
+      
+        <a href="/creation" class="menu">
+          #个人作品
+        </a>
+      
+    
+      
+        <a href="/cpp" class="menu">
+          #c++
+        </a>
+      
+    
+  </div>
+  <div class="social-container">
+    
+      
+        <a href="https://github.com/tong-hao" target="_blank">
+          <i class="ri-github-line"></i>
+        </a>
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+  </div>
+</div>
+
+        <div class="post-detail">
+          <article class="post">
+            <h2 class="post-title">
+              doris-元数据
+            </h2>
+            <div class="post-info">
+              <span>
+                2024-07-19
+              </span>
+              <span>
+                2 min read
+              </span>
+              
+                <a href="https://tong-hao.github.io/doris/" class="post-tag">
+                  # doris
+                </a>
+              
+            </div>
+            
+            <div class="post-content-wrapper">
+              <div class="post-content" v-pre>
+                <h2 id="元数据目录">元数据目录</h2>
+<figure data-type="image" tabindex="1"><img src="https://tong-hao.github.io/post-images/1721368047930.png" alt="" loading="lazy"></figure>
+<ul>
+<li>doris的元数据采用的bdb(Berkeley DB)存储的，是kv存储</li>
+<li>bdb可以理解为元数据的元数据</li>
+<li>image目录才是doris的元数据信息
+<ul>
+<li>image.xxx是元数据的镜像数据</li>
+<li>ROLE是角色数据</li>
+<li>VERSION存的是集群信息</li>
+</ul>
+</li>
+</ul>
+<h2 id="存储">存储</h2>
+<ul>
+<li>使用bdbje(Berkeley DB java editor)存放元数据</li>
+<li>怎么存放？
+<ul>
+<li>kv形式</li>
+<li>写元数据代码入口：<code>EditLog.logEdit</code></li>
+<li>回放日志代码入口：<code>Catalog.replayJournal</code></li>
+</ul>
+</li>
+<li>checkpoint
+<ul>
+<li>定期将日志形成一个image文件</li>
+<li>入口：<code>Checkpoint.runAfterCatalogReady</code></li>
+<li>逻辑
+<ul>
+<li>创建checkpoint日志位置</li>
+<li>写入新image文件</li>
+<li>将image ID 推送给其他FE节点（非master）</li>
+<li>删除旧的journal</li>
+<li>删除旧的image</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>image格式
+<ul>
+<li><img src="https://tong-hao.github.io/post-images/1721368061517.png" alt="" loading="lazy"></li>
+</ul>
+</li>
+</ul>
+<h2 id="数据同步">数据同步</h2>
+<ul>
+<li>非master的日志如何与master保持一致？
+<ul>
+<li>bdbje没有回掉机制，只能定期轮询的方式将master上的新增日志发送给follower</li>
+<li>代码入口：<code>Env.createReplayer</code></li>
+</ul>
+</li>
+<li>如何防止非master与master的失联？
+<ul>
+<li>master定期生成一个时间戳，写入catalog</li>
+<li>非master通过回放可以收到这个时间戳</li>
+<li>如果非master的这个时间戳与当前时间的差值大于配置中的值，则认为失联</li>
+<li>代码：<code>Config.meta_delay_toleration_second</code></li>
+</ul>
+</li>
+<li>master挂了之后，follower会成为新的master
+<ul>
+<li>这个是leader选举功能</li>
+<li>采用了bdbje自带的<code>StateChangeListener</code> 功能</li>
+<li>代码入口：<code>BDBStateChangeListener</code></li>
+</ul>
+</li>
+</ul>
+<h2 id="doris-元数据回放">doris-元数据回放</h2>
+<figure data-type="image" tabindex="3"><img src="https://tong-hao.github.io/post-images/1721368078777.png" alt="" loading="lazy"></figure>
+
+              </div>
+              <div class="toc-container">
+                <ul class="markdownIt-TOC">
+<li>
+<ul>
+<li><a href="#%E5%85%83%E6%95%B0%E6%8D%AE%E7%9B%AE%E5%BD%95">元数据目录</a></li>
+<li><a href="#%E5%AD%98%E5%82%A8">存储</a></li>
+<li><a href="#%E6%95%B0%E6%8D%AE%E5%90%8C%E6%AD%A5">数据同步</a></li>
+<li><a href="#doris-%E5%85%83%E6%95%B0%E6%8D%AE%E5%9B%9E%E6%94%BE">doris-元数据回放</a></li>
+</ul>
+</li>
+</ul>
+
+              </div>
+            </div>
+          </article>
+        </div>
+
+        
+          <div class="next-post">
+            <div class="next">下一篇</div>
+            <a href="https://tong-hao.github.io/gk7KfAOV2/">
+              <h3 class="post-title">
+                doris-数据的读取
+              </h3>
+            </a>
+          </div>
+        
+
+        
+          
+            <link rel="stylesheet" href="https://unpkg.com/gitalk/dist/gitalk.css">
+<script src="https://unpkg.com/gitalk/dist/gitalk.min.js"></script>
+
+<div id="gitalk-container"></div>
+
+<script>
+
+  var gitalk = new Gitalk({
+    clientID: 'Ov23lieprxymzcVgZ0O1',
+    clientSecret: 'a8031fbd8318b584d517fd25242e7c8bdaf1c896',
+    repo: 'tong-hao.github.io',
+    owner: 'tong-hao',
+    admin: ['tong-hao'],
+    id: (location.pathname).substring(0, 49),      // Ensure uniqueness and length less than 50
+    distractionFreeMode: false  // Facebook-like distraction free mode
+  })
+
+  gitalk.render('gitalk-container')
+
+</script>
+
+          
+
+          
+        
+
+        <div class="site-footer">
+  
+  <a class="rss" href="https://tong-hao.github.io/atom.xml" target="_blank">
+    <i class="ri-rss-line"></i> RSS
+  </a>
+</div>
+
+      </div>
+    </div>
+
+    <script>
+      hljs.initHighlightingOnLoad()
+
+      let mainNavLinks = document.querySelectorAll(".markdownIt-TOC a");
+
+      // This should probably be throttled.
+      // Especially because it triggers during smooth scrolling.
+      // https://lodash.com/docs/4.17.10#throttle
+      // You could do like...
+      // window.addEventListener("scroll", () => {
+      //    _.throttle(doThatStuff, 100);
+      // });
+      // Only not doing it here to keep this Pen dependency-free.
+
+      window.addEventListener("scroll", event => {
+        let fromTop = window.scrollY;
+
+        mainNavLinks.forEach((link, index) => {
+          let section = document.getElementById(decodeURI(link.hash).substring(1));
+          let nextSection = null
+          if (mainNavLinks[index + 1]) {
+            nextSection = document.getElementById(decodeURI(mainNavLinks[index + 1].hash).substring(1));
+          }
+          if (section.offsetTop <= fromTop) {
+            if (nextSection) {
+              if (nextSection.offsetTop > fromTop) {
+                link.classList.add("current");
+              } else {
+                link.classList.remove("current");    
+              }
+            } else {
+              link.classList.add("current");
+            }
+          } else {
+            link.classList.remove("current");
+          }
+        });
+      });
+
+    </script>
+  </body>
+</html>

@@ -1,0 +1,347 @@
+<html>
+  <head>
+    <meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>一致性协议 paxos | Caton Blog</title>
+<link rel="shortcut icon" href="https://tong-hao.github.io/favicon.ico?v=1753690290554">
+<link href="https://cdn.jsdelivr.net/npm/remixicon@2.3.0/fonts/remixicon.css" rel="stylesheet">
+<link rel="stylesheet" href="https://tong-hao.github.io/styles/main.css">
+<link rel="alternate" type="application/atom+xml" title="一致性协议 paxos | Caton Blog - Atom Feed" href="https://tong-hao.github.io/atom.xml">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Droid+Serif:400,700">
+
+
+
+    <meta name="description" content="简短总结
+Paxos Components
+
+Proposers：处理客户端请求，发出提案，决定是否chose
+Acceptors：决定是否接受提案，保存chosen的提案
+
+流程
+
+
+Proposer 选择一个提案号 n
+Proposer..." />
+    <meta name="keywords" content="数据库,算法" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+    <script src="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.5.1/build/highlight.min.js"></script>
+  </head>
+  <body>
+    <div class="main">
+      <div class="main-content">
+        <div class="site-header">
+  <a href="https://tong-hao.github.io">
+  <img class="avatar" src="https://tong-hao.github.io/images/avatar.png?v=1753690290554" alt="">
+  </a>
+  <h1 class="site-title">
+    Caton Blog
+  </h1>
+  <p class="site-description">
+    ✍️一个专注于数据库的博客
+  </p>
+  <div class="menu-container">
+    
+      
+        <a href="/" class="menu">
+          首页
+        </a>
+      
+    
+      
+        <a href="/about" class="menu">
+          关于
+        </a>
+      
+    
+      
+        <a href="/tags" class="menu">
+          标签
+        </a>
+      
+    
+      
+        <a href="/pg" class="menu">
+          #pg
+        </a>
+      
+    
+      
+        <a href="/db" class="menu">
+          #数据库内核
+        </a>
+      
+    
+      
+        <a href="/graph-db" class="menu">
+          #图数据库
+        </a>
+      
+    
+      
+        <a href="/creation" class="menu">
+          #个人作品
+        </a>
+      
+    
+      
+        <a href="/cpp" class="menu">
+          #c++
+        </a>
+      
+    
+  </div>
+  <div class="social-container">
+    
+      
+        <a href="https://github.com/tong-hao" target="_blank">
+          <i class="ri-github-line"></i>
+        </a>
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+  </div>
+</div>
+
+        <div class="post-detail">
+          <article class="post">
+            <h2 class="post-title">
+              一致性协议 paxos
+            </h2>
+            <div class="post-info">
+              <span>
+                2024-06-01
+              </span>
+              <span>
+                4 min read
+              </span>
+              
+                <a href="https://tong-hao.github.io/db/" class="post-tag">
+                  # 数据库
+                </a>
+              
+                <a href="https://tong-hao.github.io/algo/" class="post-tag">
+                  # 算法
+                </a>
+              
+            </div>
+            
+            <div class="post-content-wrapper">
+              <div class="post-content" v-pre>
+                <h2 id="简短总结">简短总结</h2>
+<h3 id="paxos-components">Paxos Components</h3>
+<ul>
+<li>Proposers：处理客户端请求，发出提案，决定是否chose</li>
+<li>Acceptors：决定是否接受提案，保存chosen的提案</li>
+</ul>
+<h3 id="流程">流程</h3>
+<figure data-type="image" tabindex="1"><img src="https://tong-hao.github.io/post-images/1717209821151.webp" alt="" loading="lazy"></figure>
+<ol>
+<li>Proposer 选择一个提案号 n</li>
+<li>Proposer 准备 prepare消息发送给所有的Acceptors</li>
+<li>Acceptor 检查提案号 n, 如果比自己本地的大，则接受提案，Response会携带 acceptedPropposal 和 acceptedValue 。</li>
+<li>Proposer 准备 accept消息</li>
+<li>Proposer 发送 accept消息给所有的Acceptors</li>
+<li>Acceptor 检查提案号 n, 如果大于等于自己本地的，更新本地的{acceptedPropposal 和 acceptedValue}</li>
+<li>Proposer 如果收到拒绝就返回到1继续，没有则发送commit消息</li>
+</ol>
+<h3 id="multi-paxos">multi-paxos</h3>
+<ol>
+<li>使用basic paxos选一个Proposer作为leader</li>
+<li>后续有leader 发起 accept消息（日志复制）</li>
+<li>Acceptor 检查accept消息（日志复制）</li>
+<li>leader发送commit消息</li>
+</ol>
+<hr>
+<h2 id="参考资料">参考资料</h2>
+<p>论文《paxos》<br>
+文章《Unde􏰱􏰲􏰳anding Pa􏰴xos》</p>
+<h2 id="流程-2">流程</h2>
+<pre><code>client   proposer    acceptor    learner
+  |         |           |           |
+  *---1----&gt;*--2.pre---&gt;*           ｜
+  |         *&lt;-3.pro----*           ｜
+  |         *--4.acc---&gt;*--5.------&gt;*
+  |         |           |           |
+  |         |           |           |
+
+1. 客户端执行一个操作，调用本地的proposer执行
+2. prepare request格式: number
+   proposer 向所有的acceptor发送prepare请求。
+   acceptor收到请求后对比请求中的number和已经response过的number，如果小于response中的，则拒绝；大于则接受。
+3. promise response格式: 当前最大number
+   如果accepter拒绝请求，则取最大number，继续发起prepare request
+   如果accepter接受请求，则发起accept请求。
+4. accept request格式: number + value
+   acceptor接收到请求后，如果number是response中的最大值，则发起chosen请求，否则忽略该请求。
+5. acceptor发起chosen请求,调用本地的learner，执行状态机。
+6. learner负责日志的复制，从而保证多副本。
+
+
+</code></pre>
+<h2 id="论文摘要">论文摘要</h2>
+<pre><code>Phase 1. (a) A proposer selects a proposal number n and sends a prepare request with number n to a majority of acceptors.
+(b) If an acceptor receives a prepare request with number n greater than that of any prepare request to which it has already responded, then it responds to the request with a promise not to accept any more proposals numbered less than n and with the highest-numbered pro- posal (if any) that it has accepted.
+
+Phase 2. (a) If the proposer receives a response to its prepare requests (numbered n) from a majority of acceptors, then it sends an accept request to each of those acceptors for a proposal numbered n with a value v, where v is the value of the highest-numbered proposal among the responses, or is any value if the responses reported no proposals.
+(b) If an acceptor receives an accept request for a proposal numbered n, it accepts the proposal unless it has already responded to a prepare request having a number greater than n.
+
+
+To guarantee progress, a distinguished proposer must be selected as the only one to try issuing proposals.
+
+</code></pre>
+<h2 id="问题">问题</h2>
+<ul>
+<li>
+<p>proposer只有一个，系统启动的时候如何选择master？</p>
+</li>
+<li>
+<p>proposer如何感知对方挂掉？<br>
+proposer之间有心跳，通过心跳超时感知。</p>
+</li>
+<li>
+<p>结合分布式kv存储，理解？<br>
+添加一个顶点类型时，schema tool --&gt; schema service --&gt; kv client(分布式)[paxos客户端] --&gt; proposer<br>
+learner将顶点类型写入到kv存储中。</p>
+</li>
+<li>
+<p>并发写入性能如何保证？<br>
+paxos client不能并行发起请求，必须保证当前的请求处理完后，再发起下一个请求。<br>
+如何解决性能问题？增加group，每个group相互独立，互不影响。group数量与partition数量相一致。</p>
+</li>
+<li>
+<p>paxos是一个两阶段提交协议吗？<br>
+不是</p>
+</li>
+</ul>
+<h2 id="在项目上的设计与应用">在项目上的设计与应用</h2>
+<h3 id="流程图">流程图</h3>
+<figure data-type="image" tabindex="2"><img src="https://tong-hao.github.io/post-images/1717209780985.webp" alt="" loading="lazy"></figure>
+
+              </div>
+              <div class="toc-container">
+                <ul class="markdownIt-TOC">
+<li>
+<ul>
+<li><a href="#%E7%AE%80%E7%9F%AD%E6%80%BB%E7%BB%93">简短总结</a>
+<ul>
+<li><a href="#paxos-components">Paxos Components</a></li>
+<li><a href="#%E6%B5%81%E7%A8%8B">流程</a></li>
+<li><a href="#multi-paxos">multi-paxos</a></li>
+</ul>
+</li>
+<li><a href="#%E5%8F%82%E8%80%83%E8%B5%84%E6%96%99">参考资料</a></li>
+<li><a href="#%E6%B5%81%E7%A8%8B-2">流程</a></li>
+<li><a href="#%E8%AE%BA%E6%96%87%E6%91%98%E8%A6%81">论文摘要</a></li>
+<li><a href="#%E9%97%AE%E9%A2%98">问题</a></li>
+<li><a href="#%E5%9C%A8%E9%A1%B9%E7%9B%AE%E4%B8%8A%E7%9A%84%E8%AE%BE%E8%AE%A1%E4%B8%8E%E5%BA%94%E7%94%A8">在项目上的设计与应用</a>
+<ul>
+<li><a href="#%E6%B5%81%E7%A8%8B%E5%9B%BE">流程图</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+              </div>
+            </div>
+          </article>
+        </div>
+
+        
+          <div class="next-post">
+            <div class="next">下一篇</div>
+            <a href="https://tong-hao.github.io/z-PMZclWW/">
+              <h3 class="post-title">
+                miniob
+              </h3>
+            </a>
+          </div>
+        
+
+        
+          
+            <link rel="stylesheet" href="https://unpkg.com/gitalk/dist/gitalk.css">
+<script src="https://unpkg.com/gitalk/dist/gitalk.min.js"></script>
+
+<div id="gitalk-container"></div>
+
+<script>
+
+  var gitalk = new Gitalk({
+    clientID: 'Ov23lieprxymzcVgZ0O1',
+    clientSecret: 'a8031fbd8318b584d517fd25242e7c8bdaf1c896',
+    repo: 'tong-hao.github.io',
+    owner: 'tong-hao',
+    admin: ['tong-hao'],
+    id: (location.pathname).substring(0, 49),      // Ensure uniqueness and length less than 50
+    distractionFreeMode: false  // Facebook-like distraction free mode
+  })
+
+  gitalk.render('gitalk-container')
+
+</script>
+
+          
+
+          
+        
+
+        <div class="site-footer">
+  
+  <a class="rss" href="https://tong-hao.github.io/atom.xml" target="_blank">
+    <i class="ri-rss-line"></i> RSS
+  </a>
+</div>
+
+      </div>
+    </div>
+
+    <script>
+      hljs.initHighlightingOnLoad()
+
+      let mainNavLinks = document.querySelectorAll(".markdownIt-TOC a");
+
+      // This should probably be throttled.
+      // Especially because it triggers during smooth scrolling.
+      // https://lodash.com/docs/4.17.10#throttle
+      // You could do like...
+      // window.addEventListener("scroll", () => {
+      //    _.throttle(doThatStuff, 100);
+      // });
+      // Only not doing it here to keep this Pen dependency-free.
+
+      window.addEventListener("scroll", event => {
+        let fromTop = window.scrollY;
+
+        mainNavLinks.forEach((link, index) => {
+          let section = document.getElementById(decodeURI(link.hash).substring(1));
+          let nextSection = null
+          if (mainNavLinks[index + 1]) {
+            nextSection = document.getElementById(decodeURI(mainNavLinks[index + 1].hash).substring(1));
+          }
+          if (section.offsetTop <= fromTop) {
+            if (nextSection) {
+              if (nextSection.offsetTop > fromTop) {
+                link.classList.add("current");
+              } else {
+                link.classList.remove("current");    
+              }
+            } else {
+              link.classList.add("current");
+            }
+          } else {
+            link.classList.remove("current");
+          }
+        });
+      });
+
+    </script>
+  </body>
+</html>

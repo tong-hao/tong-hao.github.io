@@ -1,0 +1,875 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+    <id>https://tong-hao.github.io</id>
+    <title>Caton Blog</title>
+    <updated>2025-07-28T08:12:07.004Z</updated>
+    <generator>https://github.com/jpmonette/feed</generator>
+    <link rel="alternate" href="https://tong-hao.github.io"/>
+    <link rel="self" href="https://tong-hao.github.io/atom.xml"/>
+    <subtitle>✍️一个专注于数据库的博客</subtitle>
+    <logo>https://tong-hao.github.io/images/avatar.png</logo>
+    <icon>https://tong-hao.github.io/favicon.ico</icon>
+    <rights>All rights reserved 2025, Caton Blog</rights>
+    <entry>
+        <title type="html"><![CDATA[nebula-模糊查询]]></title>
+        <id>https://tong-hao.github.io/WiEfFzib55/</id>
+        <link href="https://tong-hao.github.io/WiEfFzib55/">
+        </link>
+        <updated>2025-07-28T08:06:57.000Z</updated>
+        <content type="html"><![CDATA[<p>NebulaGraph的模糊查询依赖与ElasticSearch。</p>
+<h2 id="es的存储格式">ES的存储格式</h2>
+<ul>
+<li>DocID设计：partId + tagId/edgetype + 属性名 + 属性值</li>
+<li>Doc Fields设计：点ID/边ID</li>
+</ul>
+<h2 id="查询过程">查询过程</h2>
+<ol>
+<li>从ES中根据属性值模糊查找，找到一组頂点ID或边ID。</li>
+<li>将頂点ID序列化成对应的Key，根据Key从Nebula的kv存储中完全匹配出对应的Value。</li>
+</ol>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[nebula-存储层-存储格式]]></title>
+        <id>https://tong-hao.github.io/UXItVVq8kM/</id>
+        <link href="https://tong-hao.github.io/UXItVVq8kM/">
+        </link>
+        <updated>2025-07-28T07:49:43.000Z</updated>
+        <content type="html"><![CDATA[<h2 id="1点的存储格式">1）点的存储格式：</h2>
+<figure data-type="image" tabindex="1"><img src="https://oscimg.oschina.net/oscnet/up-9cf8025c50fce1a348e4c93e990a80b3455.png" alt="" loading="lazy"></figure>
+<ul>
+<li>点的PartitionId是通过<code>hash(vid)%parts</code>决定的</li>
+</ul>
+<p>例子：vid为50的点存在两个tag<br>
+<img src="https://oscimg.oschina.net/oscnet/up-51192c519b07a2ff4ba00b39ba9b90bf120.png" alt="" loading="lazy"></p>
+<h2 id="2边的存储格式">2）边的存储格式：</h2>
+<figure data-type="image" tabindex="2"><img src="https://oscimg.oschina.net/oscnet/up-25135a07713cc6b652b73ecd4731d8a93ef.png" alt="" loading="lazy"></figure>
+<ul>
+<li>边的PartitionId是通过<code>hash(srcVertexId)%parts</code>决定的</li>
+<li>edge type，正向边是正数，反向边是负数</li>
+</ul>
+<p>注意：一条边需要在存储上存两次，一条正向边一条反向边</p>
+<h2 id="3点索引的存储格式">3）点索引的存储格式：</h2>
+<figure data-type="image" tabindex="3"><img src="https://oscimg.oschina.net/oscnet/up-36d4069ce9791b79e4a8518a3d6f010eb4f.png" alt="" loading="lazy"></figure>
+<ul>
+<li>PartitionId: 与该点在同一个part上</li>
+<li>IndexId：索引schema ID，通过它可以获取到TagId。</li>
+<li>Index binary：属性值的字节编码</li>
+<li>VertexId：顶点ID</li>
+</ul>
+<p>注意：要扫所有的part</p>
+<p>例子：<br>
+<img src="https://oscimg.oschina.net/oscnet/up-a4fd2ed463d0303e8ff4df4c3187b62eeb2.png" alt="" loading="lazy"></p>
+<h2 id="4边索引的存储格式">4）边索引的存储格式：</h2>
+<figure data-type="image" tabindex="4"><img src="https://oscimg.oschina.net/oscnet/up-aa992a8280c8a7bef85ea4bae2286d0fbcb.png" alt="" loading="lazy"></figure>
+<ul>
+<li>PartitionId: 与该src在同一个part上</li>
+</ul>
+<h2 id="5index-binary存储结构">5）Index binary存储结构</h2>
+<ul>
+<li>Index binary 区分定长字段和不定长字段</li>
+<li>int、double、bool 为定长字段，string 则为不定长字段</li>
+<li>为了精确地定位不定长字段，在 index binary 末尾用 int32 记录了不定长字段的长度。</li>
+</ul>
+<p>例子：<br>
+假如索引列 c1、c2、c3 某一行对应的 property 值分别为：23、&quot;abc&quot;、&quot;here&quot;<br>
+<img src="https://oscimg.oschina.net/oscnet/up-e572425d738f599277c69d4617460d38273.png" alt="" loading="lazy"></p>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[nebula-元数据-存储格式]]></title>
+        <id>https://tong-hao.github.io/s2KZWYRSSQ/</id>
+        <link href="https://tong-hao.github.io/s2KZWYRSSQ/">
+        </link>
+        <updated>2025-07-28T07:49:03.000Z</updated>
+        <content type="html"><![CDATA[<h2 id="介绍">介绍</h2>
+<ul>
+<li>MetaService是NebulaGraph的元数据管理服务，有多个进程组成，采用了raft协议来保证数据的一致性。</li>
+<li>功能：用户、权限、Schema、Job、分区数据的管理。</li>
+</ul>
+<h2 id="schema存储">schema存储</h2>
+<h2 id="tag">Tag</h2>
+<p>Schema索引：</p>
+<ul>
+<li>key：“index关键字”+类型Tag+spaceId+TagName</li>
+<li>val：tagID</li>
+</ul>
+<p>Schema数据：</p>
+<ul>
+<li>key：“tags”+spaceId+tagId+版本</li>
+<li>Value: NameLen+Name+Schema序列化数据</li>
+</ul>
+<h2 id="edge">Edge</h2>
+<p>Schema索引：</p>
+<ul>
+<li>Key：index关键字+类型边+spaceID+边名称</li>
+<li>Val：EdgeID</li>
+</ul>
+<p>Schema数据：</p>
+<ul>
+<li>Key：edges关键字 + spaceID + EdgeID + 版本</li>
+<li>Val：NameLen+Name+Schema序列化数据</li>
+</ul>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[nebula-create tag过程]]></title>
+        <id>https://tong-hao.github.io/0FQZOObxgM/</id>
+        <link href="https://tong-hao.github.io/0FQZOObxgM/">
+        </link>
+        <updated>2025-07-28T07:48:20.000Z</updated>
+        <content type="html"><![CDATA[<h2 id="parser层">parser层</h2>
+<ol>
+<li>在 parser.yy 中定义了 create tag</li>
+</ol>
+<pre><code>create_tag_sentence
+    : KW_CREATE KW_TAG opt_if_not_exists name_label L_PAREN R_PAREN opt_create_schema_prop_list {
+        $$ = new CreateTagSentence($4, new ColumnSpecificationList(), $7 == nullptr ? new SchemaPropList() : $7, $3);
+    }
+    | KW_CREATE KW_TAG opt_if_not_exists name_label L_PAREN column_spec_list R_PAREN opt_create_schema_prop_list {
+        $$ = new CreateTagSentence($4, $6, $8 == nullptr ? new SchemaPropList() : $8, $3);
+    }
+    | KW_CREATE KW_TAG opt_if_not_exists name_label L_PAREN column_spec_list COMMA R_PAREN opt_create_schema_prop_list {
+        $$ = new CreateTagSentence($4, $6, $9 == nullptr ? new SchemaPropList() : $9, $3);
+    }
+    ;
+</code></pre>
+<ol start="2">
+<li>
+<p>在 <code>QueryInstance::validateAndOptimize()</code> 中，通过 <code>auto result = GQLParser(qctx()).parse(rctx-&gt;query());</code> 将用户输入的 ngql 转换成了 Sentence 对象。</p>
+</li>
+<li>
+<p>在 <code>Validator::validate</code> 中调用 <code>CreateTagValidator::validateImpl()</code> 中对 sentence 进行校验, 同时调用 <code>toPlan()</code> 生成执行计划。</p>
+</li>
+<li>
+<p><code>findBestPlan()</code> 找出最优的执行计划。</p>
+</li>
+<li>
+<p>通过调度器执行Plan</p>
+</li>
+</ol>
+<pre><code class="language-c++">    scheduler_-&gt;schedule()
+        .thenValue([this](Status s) {
+          if (s.ok()) {
+            this-&gt;onFinish();
+          } else {
+            this-&gt;onError(std::move(s));
+          }
+        })
+</code></pre>
+<ol start="6">
+<li>
+<p>在 schedule中，创建 Executor 并调用 <code>AsyncMsgNotifyBasedScheduler::doSchedule</code> 执行Executor。</p>
+</li>
+<li>
+<p>create tag 对应的 executor 是 <code>CreateTagExecutor::execute()</code> , 在这里调用了 <code>getMetaClient()-&gt;createTagSchema</code></p>
+</li>
+</ol>
+<h2 id="meta层">meta层</h2>
+<ol>
+<li>
+<p><code>MetaServiceHandler::future_createTag</code> 负责接收并处理 createTag。然后调用 <code>CreateTagProcessor</code></p>
+</li>
+<li>
+<p>在 <code>CreateTagProcessor::process</code> 中 会序列化两条KV数据：</p>
+<ul>
+<li><code>TagID -&gt; Tag数据</code> 这个KV用于Schema，Tag数据里面包含了属性等信息。</li>
+<li><code>TagName -&gt; TagID</code> 这个KV用于索引</li>
+</ul>
+</li>
+<li>
+<p>两条KV数据会交给 <code>NebulaStore::asyncMultiPut</code> 执行添加。</p>
+</li>
+<li>
+<p>调用 <code>Part::asyncMultiPut</code> ，元数据使用的是默认的Part。</p>
+</li>
+<li>
+<p>调用 <code>RaftPart::appendLogAsync</code> , 在这里会调用raft的复制日志的过程，会包含两个步骤：</p>
+<ul>
+<li>写WAL</li>
+<li>复制给followers</li>
+</ul>
+</li>
+</ol>
+<h2 id="总结">总结</h2>
+<ul>
+<li>Nebula的元数据是在rocksdb中存储的</li>
+<li>在rocksdb的基础上，基于raft一致性协议创建了 NebulaStore 这个分布式的存储。</li>
+<li>MetaService 收到rpc请求后，将元数据序列化为 KV，并由 NebulaStore 进行执行添加。</li>
+</ul>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[nebula-架构]]></title>
+        <id>https://tong-hao.github.io/YAR2-yrESB/</id>
+        <link href="https://tong-hao.github.io/YAR2-yrESB/">
+        </link>
+        <updated>2025-07-28T07:47:23.000Z</updated>
+        <content type="html"><![CDATA[<h2 id="三个服务">三个服务</h2>
+<ul>
+<li>nebulagraph是一个存算分离的架构，它有三个组件：graph、storage、meta
+<ul>
+<li>graph 负责查询层，主要是parser、优化器、执行器等</li>
+<li>storage 负责存储
+<ul>
+<li>底层采用rocksdb</li>
+<li>在上面基于raft协议提供分布式存储</li>
+</ul>
+</li>
+<li>meta 负责元数据的存储的
+<ul>
+<li>schema方面的存储，比如：库、点、边、索引等</li>
+<li>集群管理信息</li>
+<li>用户、角色</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<h2 id="分区">分区</h2>
+<ul>
+<li>数据分区
+<ul>
+<li>采用的是hash的方式</li>
+</ul>
+</li>
+<li>执行insert
+<ul>
+<li>通过hash计算出partitionID</li>
+<li>再根据meta提供的partition信息可以得到storage的地址</li>
+<li>再将请求发送给对应storage</li>
+</ul>
+</li>
+</ul>
+<h2 id="整体架构">整体架构</h2>
+<figure data-type="image" tabindex="1"><img src="https://tong-hao.github.io/post-images/1753688866587.png" alt="" loading="lazy"></figure>
+<ul>
+<li>Nebula的MetaService 和 StorageService都采用的了raft 保证数据的一致性</li>
+<li>每个StorageService 对应1个存储节点</li>
+<li>每个StorageService包含了一部分的 Partition 数据的Leader角色，每个 Partition 的Leader 都能在3个节点中找到，并且是唯一的。</li>
+<li>由每个Partition Leader 负责将数据复制给 Partition Follower</li>
+<li>MetaService只有1个Partition</li>
+</ul>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[nebula-查询层]]></title>
+        <id>https://tong-hao.github.io/7epNfP5Xy5/</id>
+        <link href="https://tong-hao.github.io/7epNfP5Xy5/">
+        </link>
+        <updated>2025-07-28T07:45:28.000Z</updated>
+        <content type="html"><![CDATA[<h2 id="1-整体流程">1 整体流程</h2>
+<p>整体流程：解析器 -&gt; 校验器 -&gt; 计划器 -&gt; 优化器 -&gt; 执行器</p>
+<pre><code>(ngql)-&gt;
+(parser)-[AST]-&gt;
+(validator)-[AST]-&gt;
+(planner)-[plan tree]-&gt;
+(optimizer)-[plan tree]-&gt;
+(executor)-[action]-&gt;
+(storage client)
+</code></pre>
+<p>补充：</p>
+<ul>
+<li>执行模型：火山、物化、向量，Nebula用的是火山模型。</li>
+</ul>
+<h2 id="2-parser">2 Parser</h2>
+<p>1） <code>src/parser/parser.yy</code> 文件中定义了ngql的语法规则，这里面会创建 xxxSentence。</p>
+<p>2） 执行 <code>auto result = GQLParser(qctx()).parse(rctx-&gt;query());</code> 时候对用户输入的ngql进行解析，这里会调用flex/bison。</p>
+<h2 id="3-validator">3 Validator</h2>
+<p>1）validator在 src/graph/validator 目录下，会为不同的Sentence创建对应的 validator<br>
+2）每个validator 都实现了 <code>validateImpl()</code>  方法，并在这里完成校验</p>
+<h2 id="4-optimizer">4 Optimizer</h2>
+<ul>
+<li>Nebula Graph 主要实现的是 RBO</li>
+<li>代码在 <code>src/optimizer</code>，<code>src/optimizer/rule</code>目录则是预设的规则集</li>
+<li>优化器优化查询的入口则在<code>src/service/QueryInstance.cpp</code>文件中</li>
+</ul>
+<pre><code class="language-C++">Status QueryInstance::validateAndOptimize() {
+    auto *rctx = qctx()-&gt;rctx();
+    VLOG(1) &lt;&lt; &quot;Parsing query: &quot; &lt;&lt; rctx-&gt;query();
+    auto result = GQLParser(qctx()).parse(rctx-&gt;query());
+    NG_RETURN_IF_ERROR(result);
+    sentence_ = std::move(result).value();
+
+    NG_RETURN_IF_ERROR(Validator::validate(sentence_.get(), qctx()));
+    NG_RETURN_IF_ERROR(findBestPlan());
+
+    return Status::OK();
+}
+</code></pre>
+<p><code>findBestPlan</code>函数会调用优化器，优化并返回一个全新的优化过的执行计划。</p>
+<p>优化器实现的一个例子：<br>
+<img src="https://tong-hao.github.io/post-images/1753688788666.webp" alt="" loading="lazy"><br>
+<code>src/optimizer/rule/LimitPushDownRule.cpp</code>文件：</p>
+<pre><code class="language-C++">
+std::unique_ptr&lt;OptRule&gt; LimitPushDownRule::kInstance =
+    std::unique_ptr&lt;LimitPushDownRule&gt;(new LimitPushDownRule());
+
+LimitPushDownRule::LimitPushDownRule() {
+    RuleSet::QueryRules().addRule(this);
+}
+
+const Pattern &amp;LimitPushDownRule::pattern() const {
+    static Pattern pattern =
+        Pattern::create(graph::PlanNode::Kind::kLimit,
+                        {Pattern::create(graph::PlanNode::Kind::kProject,
+                                         {Pattern::create(graph::PlanNode::Kind::kGetNeighbors)})});
+    return pattern;
+}
+</code></pre>
+<pre><code class="language-C++">StatusOr&lt;OptRule::TransformResult&gt; LimitPushDownRule::transform(
+    OptContext *octx,
+    const MatchedResult &amp;matched) const {
+    auto limitGroupNode = matched.node;
+    auto projGroupNode = matched.dependencies.front().node;
+    auto gnGroupNode = matched.dependencies.front().dependencies.front().node;
+
+    const auto limit = static_cast&lt;const Limit *&gt;(limitGroupNode-&gt;node());
+    const auto proj = static_cast&lt;const Project *&gt;(projGroupNode-&gt;node());
+    const auto gn = static_cast&lt;const GetNeighbors *&gt;(gnGroupNode-&gt;node());
+
+    int64_t limitRows = limit-&gt;offset() + limit-&gt;count();
+    if (gn-&gt;limit() &gt;= 0 &amp;&amp; limitRows &gt;= gn-&gt;limit()) {
+        return TransformResult::noTransform();
+    }
+
+    auto newLimit = static_cast&lt;Limit *&gt;(limit-&gt;clone());
+    auto newLimitGroupNode = OptGroupNode::create(octx, newLimit, limitGroupNode-&gt;group());
+
+    auto newProj = static_cast&lt;Project *&gt;(proj-&gt;clone());
+    auto newProjGroup = OptGroup::create(octx);
+    auto newProjGroupNode = newProjGroup-&gt;makeGroupNode(newProj);
+
+    auto newGn = static_cast&lt;GetNeighbors *&gt;(gn-&gt;clone());
+    newGn-&gt;setLimit(limitRows);
+    auto newGnGroup = OptGroup::create(octx);
+    auto newGnGroupNode = newGnGroup-&gt;makeGroupNode(newGn);
+
+    newLimitGroupNode-&gt;dependsOn(newProjGroup);
+    newProjGroupNode-&gt;dependsOn(newGnGroup);
+    for (auto dep : gnGroupNode-&gt;dependencies()) {
+        newGnGroupNode-&gt;dependsOn(dep);
+    }
+
+    TransformResult result;
+    result.eraseAll = true;
+    result.newGroupNodes.emplace_back(newLimitGroupNode);
+    return result;
+}
+
+std::string LimitPushDownRule::toString() const {
+    return &quot;LimitPushDownRule&quot;;
+}
+</code></pre>
+<h2 id="5-scheduler-和-executor">5 Scheduler 和 Executor</h2>
+<ul>
+<li>执行引擎通过 Scheduler（调度器）将 Planner 生成的<code>执行计划</code>转换为<code>一系列Executor</code>，驱动 Executor 的执行。</li>
+<li>Executor，即执行器，物理执行计划中的每个 PlanNode 都会对应一个 Executor。</li>
+<li>调度器的源码在 <code>src/scheduler</code> 目录下</li>
+<li>执行器的源码在 <code>src/executor</code> 目录下</li>
+</ul>
+<p>执行过程:</p>
+<ul>
+<li>调度器从Plan树的根节点开始执行</li>
+<li>使用广度优先遍历和执行</li>
+<li>PlanNode之间通过消息通知机制调度，每个PlanNode收到所有依赖节点的消息后开始执行，执行完成后，通知下游节点。</li>
+<li>每个 Executor 会经历 create-open-execute-close 四个阶段：</li>
+</ul>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[nebula-TTL]]></title>
+        <id>https://tong-hao.github.io/RqfH17RYoi/</id>
+        <link href="https://tong-hao.github.io/RqfH17RYoi/">
+        </link>
+        <updated>2025-07-28T07:44:50.000Z</updated>
+        <content type="html"><![CDATA[<h2 id="语法">语法</h2>
+<pre><code class="language-bash">CREATE TAG t (id int, ts timestamp ) ttl_duration=3600, ttl_col=&quot;ts&quot;;
+</code></pre>
+<ul>
+<li>用一个属性（如：ts）记录<strong>开始时间</strong>。</li>
+<li>ttl_col 用于指定哪个属性作为开始时间。</li>
+<li>ttl_duration 用于表示时长。</li>
+</ul>
+<h2 id="数据过期逻辑">数据过期逻辑</h2>
+<ul>
+<li>nebula是基于compaction实现TTL</li>
+<li>RocksDB 在 compaction 过程中，每读取一条数据时，都会调用一个定制的Filter 函数。</li>
+<li>TTL compaction 的实现方法就是在 <strong>Filter函数</strong> 中实现 TTL 过期数据删除逻辑，具体如下：
+<ol>
+<li>首先获取 tag / edge 的 TTL 信息</li>
+<li>然后遍历每个顶点或边数据，取出 ttl_col 列字段值</li>
+<li>根据 ttl_duration 的值加上 ttl_col 列字段值，跟当前时间的时间戳进行比较，然后判断数据是否过期，过期的数据将被删除。</li>
+</ol>
+</li>
+</ul>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[velox 入门]]></title>
+        <id>https://tong-hao.github.io/w8fxotLMK-/</id>
+        <link href="https://tong-hao.github.io/w8fxotLMK-/">
+        </link>
+        <updated>2025-07-28T00:28:41.000Z</updated>
+        <content type="html"><![CDATA[<h2 id="向量">向量</h2>
+<p>velox使用列式表达向量。</p>
+<p>通过 makeFlatVector 创建向量：</p>
+<pre><code class="language-c++">auto a = makeFlatVector&lt;int64_t&gt;({0, 1, 2, 3, 4, 5, 6});
+auto b = makeFlatVector&lt;int64_t&gt;({0, 5, 10, 15, 20, 25, 30});
+auto dow = makeFlatVector&lt;std::string&gt;({&quot;monday&quot;, &quot;tuesday&quot;, &quot;wednesday&quot;, &quot;thursday&quot;, &quot;friday&quot;, &quot;saturday&quot;, &quot;sunday&quot;});
+</code></pre>
+<p>将 a、b、dow组织成一张表：</p>
+<pre><code class="language-c++">auto data = makeRowVector({&quot;a&quot;, &quot;b&quot;, &quot;dow&quot;}, {a, b, dow});
+
+std::cout &lt;&lt; data-&gt;toString() &lt;&lt; std::endl;
+std::cout &lt;&lt; data-&gt;toString(0, data-&gt;size()) &lt;&lt; std::endl;
+</code></pre>
+<p>执行结果:</p>
+<pre><code> &gt; [ROW ROW&lt;a:BIGINT,b:BIGINT,dow:VARCHAR&gt;: 7 elements, no nulls]
+0: {0, 0, monday}
+1: {1, 5, tuesday}
+2: {2, 10, wednesday}
+3: {3, 15, thursday}
+4: {4, 20, friday}
+5: {5, 25, saturday}
+6: {6, 30, sunday}
+</code></pre>
+<p>说明：</p>
+<ul>
+<li><code>{&quot;a&quot;, &quot;b&quot;, &quot;dow&quot;}</code> 为列的字段名</li>
+</ul>
+<h2 id="表达式">表达式</h2>
+<h3 id="表达式-ab">表达式 <code>a+b</code></h3>
+<pre><code class="language-c++">// 编译表达树
+auto exprSet = compileExpression(&quot;a + b&quot;, asRowType(data-&gt;type()));
+std::cout &lt;&lt; exprSet-&gt;toString(false /*compact*/) &lt;&lt; std::endl;
+
+// 计算表达树
+auto c = evaluate(*exprSet, data);
+
+// 构建一张abc表
+auto abc = makeRowVector({&quot;a&quot;, &quot;b&quot;, &quot;c&quot;}, {a, b, c});
+std::cout &lt;&lt; abc-&gt;toString() &lt;&lt; std::endl;
+std::cout &lt;&lt; abc-&gt;toString(0, c-&gt;size()) &lt;&lt; std::endl;
+</code></pre>
+<p>表达树结构如下：</p>
+<pre><code>plus -&gt; BIGINT [#1]
+   a -&gt; BIGINT [#2]
+   b -&gt; BIGINT [#3]
+</code></pre>
+<p>abc表的结果如下：</p>
+<pre><code>&gt; [ROW ROW&lt;a:BIGINT,b:BIGINT,c:BIGINT&gt;: 7 elements, no nulls]
+0: {0, 0, 0}
+1: {1, 5, 6}
+2: {2, 10, 12}
+3: {3, 15, 18}
+4: {4, 20, 24}
+5: {5, 25, 30}
+6: {6, 30, 36}
+</code></pre>
+<h3 id="表达式2-a-b-3">表达式<code>2 * a + b % 3</code></h3>
+<pre><code class="language-c++">// 编译表达式
+exprSet = compileExpression(&quot;2 * a + b % 3&quot;, asRowType(data-&gt;type()));
+std::cout &lt;&lt; exprSet-&gt;toString(false /*compact*/) &lt;&lt; std::endl;
+
+// 计算表达式的结果为d
+auto d = evaluate(*exprSet, data);
+
+// 构建一张abd表
+auto abd = makeRowVector({&quot;a&quot;, &quot;b&quot;, &quot;d&quot;}, {a, b, d});
+std::cout &lt;&lt; abd-&gt;toString() &lt;&lt; std::endl;
+std::cout &lt;&lt; abd-&gt;toString(0, d-&gt;size()) &lt;&lt; std::endl;
+</code></pre>
+<p>树的结构：</p>
+<pre><code>plus -&gt; BIGINT [#1]
+   multiply -&gt; BIGINT [#2]
+      2:BIGINT -&gt; BIGINT [#3]
+      a -&gt; BIGINT [#4]
+   mod -&gt; BIGINT [#5]
+      b -&gt; BIGINT [#6]
+      3:BIGINT -&gt; BIGINT [#7]
+</code></pre>
+<p>abd表的结果如下：</p>
+<pre><code>&gt; [ROW ROW&lt;a:BIGINT,b:BIGINT,d:BIGINT&gt;: 7 elements, no nulls]
+0: {0, 0, 0}
+1: {1, 5, 4}
+2: {2, 10, 5}
+3: {3, 15, 6}
+4: {4, 20, 10}
+5: {5, 25, 11}
+6: {6, 30, 12}
+</code></pre>
+<h3 id="表达式-concatuppersubstrdow-1-1-substrdow-2-2">表达式 <code>concat(upper(substr(dow, 1, 1)), substr(dow, 2, 2))</code></h3>
+<pre><code class="language-c++">exprSet = compileExpression(
+      &quot;concat(upper(substr(dow, 1, 1)), substr(dow, 2, 2))&quot;,
+      asRowType(data-&gt;type()));
+std::cout &lt;&lt; exprSet-&gt;toString(false /*compact*/) &lt;&lt; std::endl;
+
+auto shortDow = evaluate(*exprSet, data);
+std::cout &lt;&lt; shortDow-&gt;toString() &lt;&lt; std::endl;
+std::cout &lt;&lt; shortDow-&gt;toString(0, shortDow-&gt;size()) &lt;&lt; std::endl;
+</code></pre>
+<ul>
+<li>substr(dow, 1, 1)  从dow列的第1个位置开始，取1个字符</li>
+<li>substr(dow, 2, 2) 从dow列的第2个位置开始，取2个字符</li>
+<li>upper 转大写</li>
+<li>concat 拼接两个字符串</li>
+<li>evaluate 计算表达式</li>
+</ul>
+<p>树的结构如下：</p>
+<pre><code>concat -&gt; VARCHAR [#1]
+   upper -&gt; VARCHAR [#2]
+      substr -&gt; VARCHAR [#3]
+         dow -&gt; VARCHAR [#4]
+         1:BIGINT -&gt; BIGINT [#5]
+         1:BIGINT -&gt; BIGINT [CSE #5]
+   substr -&gt; VARCHAR [#6]
+      dow -&gt; VARCHAR [CSE #4]
+      2:BIGINT -&gt; BIGINT [#7]
+      2:BIGINT -&gt; BIGINT [CSE #7]
+</code></pre>
+<p>执行结果如下：</p>
+<pre><code>&gt; [FLAT VARCHAR: 7 elements, no nulls]
+0: Mon
+1: Tue
+2: Wed
+3: Thu
+4: Fri
+5: Sat
+6: Sun
+</code></pre>
+<h2 id="查询">查询</h2>
+<h3 id="聚合">聚合</h3>
+<pre><code class="language-cpp">auto plan = PlanBuilder()
+              .values({data})
+              .singleAggregation(
+                  {},
+                  {&quot;sum(a) AS sum_a&quot;,
+                   &quot;avg(a) AS avg_a&quot;,
+                   &quot;sum(b) AS sum_b&quot;,
+                   &quot;avg(b) AS avg_b&quot;})
+              .planNode();
+
+auto sumAvg = getResults(plan);
+
+std::cout &lt;&lt; sumAvg-&gt;toString() &lt;&lt; std::endl;
+std::cout &lt;&lt; sumAvg-&gt;toString(0, sumAvg-&gt;size()) &lt;&lt; std::endl;
+</code></pre>
+<ul>
+<li><code>PlanBuilder</code> 构造查询计划</li>
+<li><code>PlanBuilder&amp; singleAggregation(std::vector&lt;std::string&gt; groupingKeys,std::vector&lt;std::string&gt; aggregates);</code>  构建聚合，当前没有指定group key</li>
+<li><code>getResults</code> 获取plan的执行结果</li>
+</ul>
+<p>运行结果：</p>
+<pre><code>&gt; [ROW ROW&lt;sum_a:BIGINT,avg_a:DOUBLE,sum_b:BIGINT,avg_b:DOUBLE&gt;: 1 elements, no nulls]
+0: {15, 2.5, 75, 12.5}
+</code></pre>
+<h3 id="排序">排序</h3>
+<pre><code class="language-cpp">plan = PlanBuilder()
+    .values({data})
+    .orderBy({&quot;a DESC&quot;}, false /*isPartial*/)
+    .planNode();
+
+auto sorted = getResults(plan);
+std::cout &lt;&lt; sorted-&gt;toString() &lt;&lt; std::endl;
+std::cout &lt;&lt; sorted-&gt;toString(0, sorted-&gt;size()) &lt;&lt; std::endl;
+</code></pre>
+<ul>
+<li><code>orderBy(..., true)</code> 表示局部有序，常用于分布式执行的中间阶段。</li>
+<li><code>orderBy(..., false)</code> 表示全局排序。</li>
+</ul>
+<p>运行结果：</p>
+<pre><code>&gt; [ROW ROW&lt;a:BIGINT,b:BIGINT&gt;: 6 elements, no nulls]
+0: {5, 25}
+1: {4, 20}
+2: {3, 15}
+3: {2, 10}
+4: {1, 5}
+5: {0, 0}
+</code></pre>
+<h3 id="topn">TopN</h3>
+<pre><code class="language-cpp">plan = PlanBuilder()
+    .values({data})
+    .topN({&quot;a DESC&quot;}, 3, false /*isPartial*/)
+    .planNode();
+
+auto top3 = getResults(plan);
+std::cout &lt;&lt; top5-&gt;toString() &lt;&lt; std::endl;
+std::cout &lt;&lt; top5-&gt;toString(0, top3-&gt;size()) &lt;&lt; std::endl;
+</code></pre>
+<p>topN的三个参数：</p>
+<ul>
+<li><code>const std::vector&lt;std::string&gt;&amp; sortingKeys</code> 排序的Key</li>
+<li><code>int32_t count</code> 取前几个</li>
+<li><code>bool isPartial</code> false 代表全局有序，true代表局部有序</li>
+</ul>
+<p>运行结果：</p>
+<pre><code>&gt; [ROW ROW&lt;a:BIGINT,b:BIGINT&gt;: 3 elements, no nulls]
+0: {5, 25}
+1: {4, 20}
+2: {3, 15}
+</code></pre>
+<h3 id="过滤">过滤</h3>
+<pre><code class="language-cpp">plan = PlanBuilder().values({data}).filter(&quot;a % 2 == 0&quot;).planNode();
+
+auto evenA = AssertQueryBuilder(plan).copyResults(pool());
+std::cout &lt;&lt; std::endl &lt;&lt; &quot;&gt; rows with even values of 'a': &quot; &lt;&lt; evenA-&gt;toString() &lt;&lt; std::endl;
+std::cout &lt;&lt; evenA-&gt;toString(0, evenA-&gt;size()) &lt;&lt; std::endl;
+</code></pre>
+<ul>
+<li><code>filter(&quot;a % 2 == 0&quot;)</code> 这里的a是a列</li>
+</ul>
+<p>运行结果：</p>
+<pre><code>&gt; [ROW ROW&lt;a:BIGINT,b:BIGINT,dow:VARCHAR&gt;: 4 elements, no nulls]
+0: {0, 0, monday}
+1: {2, 10, wednesday}
+2: {4, 20, friday}
+3: {6, 30, sunday}
+</code></pre>
+<h2 id="connectors">Connectors</h2>
+<pre><code class="language-cpp">plan = PlanBuilder()
+           .tpchTableScan(
+               tpch::Table::TBL_NATION,
+               {&quot;n_nationkey&quot;, &quot;n_name&quot;},
+               1 /*scaleFactor*/)
+           .planNode();
+
+auto nations = AssertQueryBuilder(plan).split(makeTpchSplit()).copyResults(pool());
+
+std::cout &lt;&lt; std::endl
+          &lt;&lt; &quot;&gt; first 10 rows from TPC-H nation table: &quot;
+          &lt;&lt; nations-&gt;toString() &lt;&lt; std::endl;
+std::cout &lt;&lt; nations-&gt;toString(0, 10) &lt;&lt; std::endl;
+</code></pre>
+<ul>
+<li>tpchTableScan的三个参数：
+<ul>
+<li><code>tpch::Table table</code>  是表的枚举值，包含了：<code>TBL_NATION</code>, <code>TBL_LINEITEM</code>, <code>TBL_CUSTOMER</code> 等</li>
+<li><code>std::vector&lt;std::string&gt; columns</code> 要扫描的列名</li>
+<li><code>double scaleFactor</code> 数据规模，1表示1GB的数据</li>
+</ul>
+</li>
+<li><code>pool()</code> 表示使用默认的内存池</li>
+<li><code>split</code> 用于指定数据块</li>
+<li><code>makeTpchSplit</code> 生成数据块</li>
+<li><code>nations-&gt;toString(0, 10)</code> 前10行</li>
+</ul>
+<p>运行结果：</p>
+<pre><code>0: {0, ALGERIA}
+1: {1, ARGENTINA}
+2: {2, BRAZIL}
+3: {3, CANADA}
+4: {4, EGYPT}
+5: {5, ETHIOPIA}
+6: {6, FRANCE}
+7: {7, GERMANY}
+8: {8, INDIA}
+9: {9, INDONESIA}
+</code></pre>
+<h3 id="joins">Joins</h3>
+<p>统计每个区域国家的数量，并按照区域名称排序。</p>
+<pre><code class="language-cpp">auto planNodeIdGenerator = std::make_shared&lt;PlanNodeIdGenerator&gt;();
+core::PlanNodeId nationScanId;
+core::PlanNodeId regionScanId;
+plan = PlanBuilder(planNodeIdGenerator)
+           .tpchTableScan(
+               tpch::Table::TBL_NATION, {&quot;n_regionkey&quot;}, 1 /*scaleFactor*/)
+           .capturePlanNodeId(nationScanId)
+           .hashJoin(
+               {&quot;n_regionkey&quot;},
+               {&quot;r_regionkey&quot;},
+               PlanBuilder(planNodeIdGenerator)
+                   .tpchTableScan(
+                       tpch::Table::TBL_REGION,
+                       {&quot;r_regionkey&quot;, &quot;r_name&quot;},
+                       1 /*scaleFactor*/)
+                   .capturePlanNodeId(regionScanId)
+                   .planNode(),
+               &quot;&quot;, // extra filter
+               {&quot;r_name&quot;})
+           .singleAggregation({&quot;r_name&quot;}, {&quot;count(1) as nation_cnt&quot;})
+           .orderBy({&quot;r_name&quot;}, false)
+           .planNode();
+
+auto nationCnt = AssertQueryBuilder(plan)
+                     .split(nationScanId, makeTpchSplit())
+                     .split(regionScanId, makeTpchSplit())
+                     .copyResults(pool());
+
+std::cout &lt;&lt; std::endl
+          &lt;&lt; &quot;&gt; number of nations per region in TPC-H: &quot;
+          &lt;&lt; nationCnt-&gt;toString() &lt;&lt; std::endl;
+std::cout &lt;&lt; nationCnt-&gt;toString(0, 10) &lt;&lt; std::endl;
+</code></pre>
+<p>hashJoin函数：</p>
+<pre><code>PlanBuilder::hashJoin(
+    const std::vector&lt;std::string&gt;&amp; leftKeys,   // 左表的Join Key
+    const std::vector&lt;std::string&gt;&amp; rightKeys,  // 右表的Join Key
+    std::shared_ptr&lt;core::PlanNode&gt; build,      // 用来构造右表的子计划
+    const std::string&amp; filter,                  // 过滤条件
+    const std::vector&lt;std::string&gt;&amp; outputBuildColumns // 指定要输出的右表字段名，左表字段默认全部输出
+)
+</code></pre>
+<p>运行结果：</p>
+<pre><code>0: {AFRICA, 5}
+1: {AMERICA, 5}
+2: {ASIA, 5}
+3: {EUROPE, 5}
+4: {MIDDLE EAST, 5}
+</code></pre>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[folly知识点总结]]></title>
+        <id>https://tong-hao.github.io/xgTlqjMohg/</id>
+        <link href="https://tong-hao.github.io/xgTlqjMohg/">
+        </link>
+        <updated>2025-07-28T00:26:43.000Z</updated>
+        <content type="html"><![CDATA[<h2 id="folly常用的函数或类">Folly常用的函数或类</h2>
+<table>
+<thead>
+<tr>
+<th>类/函数</th>
+<th>作用说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>folly::Future&lt;T&gt;</code></td>
+<td>异步计算结果封装，支持链式调用</td>
+</tr>
+<tr>
+<td><code>folly::Promise&lt;T&gt;</code></td>
+<td>与 <code>Future</code> 配合使用，设置异步结果</td>
+</tr>
+<tr>
+<td><code>folly::fbvector&lt;T&gt;</code></td>
+<td>高性能可替代 <code>std::vector</code> 的容器</td>
+</tr>
+<tr>
+<td><code>folly::F14FastMap&lt;K,V&gt;</code></td>
+<td>高性能哈希映射</td>
+</tr>
+<tr>
+<td><code>folly::Synchronized&lt;T&gt;</code></td>
+<td>线程安全包装器，内置锁机制</td>
+</tr>
+<tr>
+<td><code>folly::spin_lock</code></td>
+<td>自旋锁</td>
+</tr>
+<tr>
+<td><code>folly::EventBase</code></td>
+<td>事件驱动框架核心，支持事件循环</td>
+</tr>
+<tr>
+<td><code>folly::to&lt;std::string&gt;(val)</code></td>
+<td>通用类型转换为字符串</td>
+</tr>
+<tr>
+<td><code>folly::format</code></td>
+<td>格式化字符串类似 <code>printf</code> 或 Python 的 format</td>
+</tr>
+<tr>
+<td><code>folly::Optional&lt;T&gt;</code></td>
+<td>可选值，类似 <code>std::optional</code></td>
+</tr>
+<tr>
+<td><code>folly::Optional&lt;T&gt;::has_value()</code></td>
+<td>判断是否有值</td>
+</tr>
+<tr>
+<td><code>folly::LifoAlloc</code></td>
+<td>高效的临时内存分配器</td>
+</tr>
+<tr>
+<td><code>folly::Benchmark</code></td>
+<td>性能测试基准工具</td>
+</tr>
+</tbody>
+</table>
+<h2 id="folly主要模块">Folly主要模块</h2>
+<h3 id="1-容器相关containers">1. 容器相关（Containers）</h3>
+<ul>
+<li><code>fbvector</code> - 类似于 <code>std::vector</code>，优化了内存分配</li>
+<li><code>F14</code> 系列哈希容器
+<ul>
+<li><code>F14FastMap</code> - 快速哈希表，能够满足大多数场景</li>
+<li><code>F14NodeMap</code> - 类似 <code>std::unordered_map</code></li>
+<li><code>F14ValueMap</code> - 类似 <code>std::vector&lt;pair&lt;K,V&gt;&gt;</code></li>
+</ul>
+</li>
+<li><code>AtomicHashMap</code> - 线程安全的哈希表</li>
+<li><code>small_vector</code> -  小容量，避免堆分配</li>
+</ul>
+<h3 id="2-字符串与格式化">2. 字符串与格式化</h3>
+<ul>
+<li><code>to</code> - 类型转换，如：<code>to&lt;std::string&gt;(...)</code></li>
+<li><code>fbstring</code> - 字符串类</li>
+<li><code>format</code> - 格式化输出</li>
+<li><code>Sformat</code> - 轻量级格式化函数</li>
+</ul>
+<h3 id="3-并发与同步concurrency">3. 并发与同步（Concurrency）</h3>
+<ul>
+<li><code>Future</code> 和 <code>Promise</code> - 类似于 <code>std::future</code>，支持链式异步操作</li>
+<li><code>ThreadLocal</code> - 线程局部存储</li>
+<li><code>Notification</code> - 用于线程间通知</li>
+<li><code>CPUThreadPoolExecutor</code> - 线程池执行器</li>
+<li><code>SpinLock</code>、<code>SharedMutex</code> - 各类锁实现</li>
+<li><code>Atomic</code> - 封装原子操作</li>
+</ul>
+<h3 id="4-内存管理memory">4. 内存管理（Memory）</h3>
+<ul>
+<li><code>MemoryPool</code> - 内存池</li>
+<li><code>LifoAlloc</code> - 后进先出分配器，适合临时内存分配</li>
+<li><code>Arena</code> - 内存分配器</li>
+<li><code>Jemalloc</code> 封装与调优</li>
+</ul>
+<h3 id="5-时间与定时time">5. 时间与定时（Time）</h3>
+<ul>
+<li><code>HHWheelTimer</code> - 高性能定时器实现</li>
+<li><code>TimePoint</code>、<code>Duration</code> - 时间点和时间段封装</li>
+</ul>
+<h3 id="6-网络networking">6. 网络（Networking）</h3>
+<ul>
+<li><code>AsyncSocket</code> - 异步Socket封装</li>
+<li><code>AsyncSSLSocket</code> - 异步SSL封装</li>
+<li><code>EventBase</code> - 事件循环</li>
+<li><code>AsyncTransport</code> - 抽象的异步传输层</li>
+<li><code>AsyncTimeout</code> - 异步定时器</li>
+</ul>
+<h3 id="7-日志logging">7. 日志（Logging）</h3>
+<ul>
+<li><code>LogStream</code> - 高性能日志流</li>
+<li><code>Logger</code> - 日志框架</li>
+<li><code>FollyLogHandler</code> - 集成系统日志</li>
+</ul>
+<h3 id="8-反射与类型支持type-utilities">8. 反射与类型支持（Type Utilities）</h3>
+<ul>
+<li><code>TypeTag</code> - 类型标签</li>
+<li><code>Function</code>、<code>FunctionRef</code> - 可调用对象包装</li>
+<li><code>Variant</code> - 类似于 <code>std::variant</code></li>
+<li><code>Optional</code> - 类似于 <code>std::optional</code></li>
+<li><code>Tuple</code> - 元组实现</li>
+</ul>
+<h3 id="9-其他工具">9. 其他工具</h3>
+<ul>
+<li><code>Optional</code> - 可选值类型</li>
+<li><code>ScopeGuard</code> - 范围结束自动执行代码（类似RAII）</li>
+<li><code>Benchmark</code> - 性能基准工具</li>
+<li><code>Symbolizer</code> - 符号化工具，堆栈追踪用</li>
+<li><code>Demangle</code> - 类型名反混淆</li>
+</ul>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[b+ tree 实现 by c++ ]]></title>
+        <id>https://tong-hao.github.io/w5bkbSttTh/</id>
+        <link href="https://tong-hao.github.io/w5bkbSttTh/">
+        </link>
+        <updated>2025-06-10T12:02:57.000Z</updated>
+        <content type="html"><![CDATA[<p>利用空闲时间用c++实现了一套B+树的实现。<br>
+详细代码见：https://github.com/tong-hao/b_plus_tree</p>
+]]></content>
+    </entry>
+</feed>

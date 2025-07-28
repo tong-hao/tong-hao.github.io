@@ -1,0 +1,284 @@
+<html>
+  <head>
+    <meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>关于postgresql的逻辑结构与物理结构 | Caton Blog</title>
+<link rel="shortcut icon" href="https://tong-hao.github.io/favicon.ico?v=1753690290554">
+<link href="https://cdn.jsdelivr.net/npm/remixicon@2.3.0/fonts/remixicon.css" rel="stylesheet">
+<link rel="stylesheet" href="https://tong-hao.github.io/styles/main.css">
+<link rel="alternate" type="application/atom+xml" title="关于postgresql的逻辑结构与物理结构 | Caton Blog - Atom Feed" href="https://tong-hao.github.io/atom.xml">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Droid+Serif:400,700">
+
+
+
+    <meta name="description" content="逻辑结构
+
+
+database cluster 是一组 databases
+A database 是一组 database objects
+数据库对象
+包括：table, indexes, sequences, views, functio..." />
+    <meta name="keywords" content="数据库,postgresql" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+    <script src="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.5.1/build/highlight.min.js"></script>
+  </head>
+  <body>
+    <div class="main">
+      <div class="main-content">
+        <div class="site-header">
+  <a href="https://tong-hao.github.io">
+  <img class="avatar" src="https://tong-hao.github.io/images/avatar.png?v=1753690290554" alt="">
+  </a>
+  <h1 class="site-title">
+    Caton Blog
+  </h1>
+  <p class="site-description">
+    ✍️一个专注于数据库的博客
+  </p>
+  <div class="menu-container">
+    
+      
+        <a href="/" class="menu">
+          首页
+        </a>
+      
+    
+      
+        <a href="/about" class="menu">
+          关于
+        </a>
+      
+    
+      
+        <a href="/tags" class="menu">
+          标签
+        </a>
+      
+    
+      
+        <a href="/pg" class="menu">
+          #pg
+        </a>
+      
+    
+      
+        <a href="/db" class="menu">
+          #数据库内核
+        </a>
+      
+    
+      
+        <a href="/graph-db" class="menu">
+          #图数据库
+        </a>
+      
+    
+      
+        <a href="/creation" class="menu">
+          #个人作品
+        </a>
+      
+    
+      
+        <a href="/cpp" class="menu">
+          #c++
+        </a>
+      
+    
+  </div>
+  <div class="social-container">
+    
+      
+        <a href="https://github.com/tong-hao" target="_blank">
+          <i class="ri-github-line"></i>
+        </a>
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+  </div>
+</div>
+
+        <div class="post-detail">
+          <article class="post">
+            <h2 class="post-title">
+              关于postgresql的逻辑结构与物理结构
+            </h2>
+            <div class="post-info">
+              <span>
+                2024-05-31
+              </span>
+              <span>
+                2 min read
+              </span>
+              
+                <a href="https://tong-hao.github.io/db/" class="post-tag">
+                  # 数据库
+                </a>
+              
+                <a href="https://tong-hao.github.io/pg/" class="post-tag">
+                  # postgresql
+                </a>
+              
+            </div>
+            
+            <div class="post-content-wrapper">
+              <div class="post-content" v-pre>
+                <h2 id="逻辑结构">逻辑结构</h2>
+<figure data-type="image" tabindex="1"><img src="https://tong-hao.github.io/post-images/1717169550771.webp" alt="" loading="lazy"></figure>
+<ul>
+<li>database cluster 是一组 databases</li>
+<li>A database 是一组 database objects</li>
+<li>数据库对象</li>
+<li>包括：table, indexes, sequences, views, functions</li>
+<li>每个数据库对象都有个OID</li>
+<li>OID是一个unsigned 4-byte integers</li>
+<li>可以通过 pg_database 和 pg_class查看oid</li>
+</ul>
+<h2 id="物理结构">物理结构</h2>
+<h3 id="database-cluster">database cluster</h3>
+<ul>
+<li>database cluster 是一个目录</li>
+<li>database 是一个子目录</li>
+<li>表和索引是数据库目录下的一个文件</li>
+<li>表空间是一个另外一个目录，不在database cluster目录下面</li>
+<li>库、表、索引的目录或文件名称都是OID</li>
+<li>文件的大小超过1G，会写到新文件中，如<code>data/base/16384/19427.1</code>
+<ul>
+<li>可以通过<code>–with-segsize</code>配置</li>
+</ul>
+</li>
+</ul>
+<figure data-type="image" tabindex="2"><img src="https://tong-hao.github.io/post-images/1717169584774.webp" alt="" loading="lazy"></figure>
+<ul>
+<li>每个表文件会关联两个文件<code>_fsm</code> 和 <code>_vm</code> ，分别称为 the free space map and visibility map。</li>
+<li>free space map 用于记录表文件中每个page的可用空间</li>
+<li>visibility map 用于记录每个page的可见性。
+<ul>
+<li>索引文件没有visibility map</li>
+<li>可用于优化VACUUM流程。在索引扫描过程中，当一个page标记为全可见，可以跳过对该页面的检查，从而提高效率。</li>
+</ul>
+</li>
+</ul>
+<p>疑问：</p>
+<ul>
+<li>the free space map is the first fork of the table/ index data file (the fork number is 1) Fork是什么意思？</li>
+<li>fork可以理解为一个文件的分支，或者一部分。</li>
+</ul>
+<h3 id="表空间">表空间</h3>
+<figure data-type="image" tabindex="3"><img src="https://tong-hao.github.io/post-images/1717169616170.webp" alt="" loading="lazy"></figure>
+<ul>
+<li>表空间是<code>base</code> 目录外的一个目录</li>
+<li>该功能是<code>8.0</code>版本实现的</li>
+<li>如果创建一个表空间，会在<code>pg_tblspc</code>目录下创建一个子目录，并且链接到表空间的实际目录中</li>
+</ul>
+
+              </div>
+              <div class="toc-container">
+                <ul class="markdownIt-TOC">
+<li>
+<ul>
+<li><a href="#%E9%80%BB%E8%BE%91%E7%BB%93%E6%9E%84">逻辑结构</a></li>
+<li><a href="#%E7%89%A9%E7%90%86%E7%BB%93%E6%9E%84">物理结构</a>
+<ul>
+<li><a href="#database-cluster">database cluster</a></li>
+<li><a href="#%E8%A1%A8%E7%A9%BA%E9%97%B4">表空间</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+              </div>
+            </div>
+          </article>
+        </div>
+
+        
+
+        
+          
+            <link rel="stylesheet" href="https://unpkg.com/gitalk/dist/gitalk.css">
+<script src="https://unpkg.com/gitalk/dist/gitalk.min.js"></script>
+
+<div id="gitalk-container"></div>
+
+<script>
+
+  var gitalk = new Gitalk({
+    clientID: 'Ov23lieprxymzcVgZ0O1',
+    clientSecret: 'a8031fbd8318b584d517fd25242e7c8bdaf1c896',
+    repo: 'tong-hao.github.io',
+    owner: 'tong-hao',
+    admin: ['tong-hao'],
+    id: (location.pathname).substring(0, 49),      // Ensure uniqueness and length less than 50
+    distractionFreeMode: false  // Facebook-like distraction free mode
+  })
+
+  gitalk.render('gitalk-container')
+
+</script>
+
+          
+
+          
+        
+
+        <div class="site-footer">
+  
+  <a class="rss" href="https://tong-hao.github.io/atom.xml" target="_blank">
+    <i class="ri-rss-line"></i> RSS
+  </a>
+</div>
+
+      </div>
+    </div>
+
+    <script>
+      hljs.initHighlightingOnLoad()
+
+      let mainNavLinks = document.querySelectorAll(".markdownIt-TOC a");
+
+      // This should probably be throttled.
+      // Especially because it triggers during smooth scrolling.
+      // https://lodash.com/docs/4.17.10#throttle
+      // You could do like...
+      // window.addEventListener("scroll", () => {
+      //    _.throttle(doThatStuff, 100);
+      // });
+      // Only not doing it here to keep this Pen dependency-free.
+
+      window.addEventListener("scroll", event => {
+        let fromTop = window.scrollY;
+
+        mainNavLinks.forEach((link, index) => {
+          let section = document.getElementById(decodeURI(link.hash).substring(1));
+          let nextSection = null
+          if (mainNavLinks[index + 1]) {
+            nextSection = document.getElementById(decodeURI(mainNavLinks[index + 1].hash).substring(1));
+          }
+          if (section.offsetTop <= fromTop) {
+            if (nextSection) {
+              if (nextSection.offsetTop > fromTop) {
+                link.classList.add("current");
+              } else {
+                link.classList.remove("current");    
+              }
+            } else {
+              link.classList.add("current");
+            }
+          } else {
+            link.classList.remove("current");
+          }
+        });
+      });
+
+    </script>
+  </body>
+</html>

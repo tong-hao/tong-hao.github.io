@@ -1,0 +1,366 @@
+<html>
+  <head>
+    <meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Raft一致性协议 | Caton Blog</title>
+<link rel="shortcut icon" href="https://tong-hao.github.io/favicon.ico?v=1753690290554">
+<link href="https://cdn.jsdelivr.net/npm/remixicon@2.3.0/fonts/remixicon.css" rel="stylesheet">
+<link rel="stylesheet" href="https://tong-hao.github.io/styles/main.css">
+<link rel="alternate" type="application/atom+xml" title="Raft一致性协议 | Caton Blog - Atom Feed" href="https://tong-hao.github.io/atom.xml">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Droid+Serif:400,700">
+
+
+
+    <meta name="description" content="简短总结
+角色以及角色之间的转换
+raft有三种角色：
+
+leader
+candidate
+follower
+
+follower-&gt;candidate : 长时间没有收到leader的心跳
+candidate-&gt;leader: ..." />
+    <meta name="keywords" content="数据库,算法" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+    <script src="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.5.1/build/highlight.min.js"></script>
+  </head>
+  <body>
+    <div class="main">
+      <div class="main-content">
+        <div class="site-header">
+  <a href="https://tong-hao.github.io">
+  <img class="avatar" src="https://tong-hao.github.io/images/avatar.png?v=1753690290554" alt="">
+  </a>
+  <h1 class="site-title">
+    Caton Blog
+  </h1>
+  <p class="site-description">
+    ✍️一个专注于数据库的博客
+  </p>
+  <div class="menu-container">
+    
+      
+        <a href="/" class="menu">
+          首页
+        </a>
+      
+    
+      
+        <a href="/about" class="menu">
+          关于
+        </a>
+      
+    
+      
+        <a href="/tags" class="menu">
+          标签
+        </a>
+      
+    
+      
+        <a href="/pg" class="menu">
+          #pg
+        </a>
+      
+    
+      
+        <a href="/db" class="menu">
+          #数据库内核
+        </a>
+      
+    
+      
+        <a href="/graph-db" class="menu">
+          #图数据库
+        </a>
+      
+    
+      
+        <a href="/creation" class="menu">
+          #个人作品
+        </a>
+      
+    
+      
+        <a href="/cpp" class="menu">
+          #c++
+        </a>
+      
+    
+  </div>
+  <div class="social-container">
+    
+      
+        <a href="https://github.com/tong-hao" target="_blank">
+          <i class="ri-github-line"></i>
+        </a>
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+  </div>
+</div>
+
+        <div class="post-detail">
+          <article class="post">
+            <h2 class="post-title">
+              Raft一致性协议
+            </h2>
+            <div class="post-info">
+              <span>
+                2024-06-01
+              </span>
+              <span>
+                5 min read
+              </span>
+              
+                <a href="https://tong-hao.github.io/db/" class="post-tag">
+                  # 数据库
+                </a>
+              
+                <a href="https://tong-hao.github.io/algo/" class="post-tag">
+                  # 算法
+                </a>
+              
+            </div>
+            
+            <div class="post-content-wrapper">
+              <div class="post-content" v-pre>
+                <h2 id="简短总结">简短总结</h2>
+<h3 id="角色以及角色之间的转换">角色以及角色之间的转换</h3>
+<p>raft有三种角色：</p>
+<ul>
+<li>leader</li>
+<li>candidate</li>
+<li>follower</li>
+</ul>
+<p>follower-&gt;candidate : 长时间没有收到leader的心跳<br>
+candidate-&gt;leader: 收到一半以上的投票<br>
+candidate/leader-&gt;follower: response中term id比自己的高</p>
+<h3 id="选主">选主</h3>
+<p>1）follower-&gt;candidate : 长时间没有收到leader的心跳<br>
+2）candidate-&gt;leader: 收到一半以上的投票</p>
+<h3 id="处理客户端请求">处理客户端请求</h3>
+<p>1）leader 收到客户端请求后，保存到日志中<br>
+2）leader 将日志复制给follower<br>
+3）如果一多半复制成功，则回复客户端</p>
+<hr>
+<h2 id="1-raft是什么">1 Raft是什么？</h2>
+<p>Raft是一致性协议算法。<br>
+比如我们有三台机器，A、B、C。为了让数据一致，其中一个作为Leader，其他两个作为Follower，Leader向Follower发送自己的数据，从而让Follower与Leader的数据保持一致。</p>
+<h2 id="2-名词">2 名词</h2>
+<ul>
+<li>Election timeout // 选举超时时间</li>
+<li>Request vote RPC // Leader选举的请求</li>
+<li>Leader 选举 // 如果选举超时时间到了 还没有收到Leader选举的请求，自己就开始向所有人发起Request vote RPC。</li>
+<li>Term值 //选举超时时间到了后将自己的Term+1</li>
+<li>赞成票</li>
+<li>反对票</li>
+<li>心跳消息 // Leader向Follower发送心跳消息。</li>
+<li>心跳超时时间 // 如果超过了心跳超时时间，就会发起新的一轮Leader竞选</li>
+<li>投票分裂</li>
+<li>Log Replication // 日志复制</li>
+</ul>
+<h2 id="3-角色">3 角色</h2>
+<ul>
+<li>Leader</li>
+<li>Follower</li>
+<li>Candidate （候选者）</li>
+</ul>
+<h2 id="4-竞选leader的过程">4 竞选Leader的过程</h2>
+<p>1）每个节点都有个随机时长的竞选超时时间，比如：A为100ms，B为150ms，C为200ms。<br>
+2）A的Term首先到期，则他成为Candidate，然后向B和C发送<code>竞选Leader的请求</code>。<br>
+3）A如果收到多数机器的数量的赞成票，就成为了Leader<br>
+4）Leader要定期的向Follower发送心跳消息。<br>
+5）如果Follower收不到Leader的心跳，就会成为Candidate，然后向其他机器发送竞选。</p>
+<h2 id="5-重新选举过程">5 重新选举过程</h2>
+<p>1）Leader宕机了<br>
+2）过了心跳超时时间，Follower收不到心跳后会发起新的一轮Leader竞选<br>
+3）（后面与<code>竞选Leader的过程</code>一样）</p>
+<h2 id="6-投票分裂情况">6 投票分裂情况</h2>
+<ul>
+<li>比如5个节点：s1,s2,s3,s4,s5</li>
+<li>s1 宕机了，s2 和 s3 同时成为了Candidator，自己先给自己投了一票</li>
+<li>s4 投s2赞成票，投s3反对票。</li>
+<li>s5 投s3赞成票，投s2反对票。</li>
+<li>s2 和 s3 都收到了2票，所以投票分裂。</li>
+</ul>
+<p>如何避免raft的投票分裂问题？</p>
+<h2 id="7-raft日志复制过程">7 Raft日志复制过程</h2>
+<p>1）S1作为Leader，先在本地写入日志，此时的日志是未提交状态。<br>
+<img src="https://tong-hao.github.io/post-images/1717210333105.webp" alt="" loading="lazy"></p>
+<p>2）S1会向所有的Follower发送日志复制消息<br>
+<img src="https://tong-hao.github.io/post-images/1717210349235.webp" alt="" loading="lazy"></p>
+<p>3）当有半数以上的日志复制成功，S1则将自己的日志状态改为已提交状态。<br>
+随后，再向Follower发送日志状态更新的消息。<br>
+<img src="https://tong-hao.github.io/post-images/1717210366727.webp" alt="" loading="lazy"></p>
+<h2 id="8-修复不一致日志的过程">8 修复不一致日志的过程</h2>
+<p>1）S1写入了2个未提交的日志后宕机<br>
+<img src="https://tong-hao.github.io/post-images/1717210379936.webp" alt="" loading="lazy"></p>
+<p>2）S2成为了Leader。成为Leader的第一件事情就是初始化所有节点的next index，让所有节点的next index都和自己保持一致。<br>
+然后S2要做一致性检查，检查的内容是next index的前一个位置的内容是否和自己一致。<br>
+明显S3的答复是一致的，S4的答复是不一致的，S5是宕机状态没有答复。<br>
+<img src="https://tong-hao.github.io/post-images/1717210391280.webp" alt="" loading="lazy"></p>
+<p>3）针对S4的不一致，S2要求检查index为2的位置是否一致，如果还不一致，要求检查index1的位置是否一致，直到一致为止。<br>
+<img src="https://tong-hao.github.io/post-images/1717210408918.webp" alt="" loading="lazy"></p>
+<p>4）然后给S4复制日志<br>
+<img src="https://tong-hao.github.io/post-images/1717210422864.webp" alt="" loading="lazy"></p>
+<p>5）S1恢复，S2要给S1做一致性检查。首先检查index=3的日志是否一致，<br>
+<img src="https://tong-hao.github.io/post-images/1717210435004.webp" alt="" loading="lazy"></p>
+<p>6）<br>
+注意：小圆点移动到index=3的位置<br>
+然后检查index=4的位置，不一致。由于raft是强一致性算法，S2会强制覆盖index=4的日志<br>
+<img src="https://tong-hao.github.io/post-images/1717210450081.webp" alt="" loading="lazy"></p>
+<p>7）日志完全一致<br>
+<img src="https://tong-hao.github.io/post-images/1717210462440.webp" alt="" loading="lazy"></p>
+<h2 id="9-raft算法的安全性">9 raft算法的安全性</h2>
+<ul>
+<li>S5节点恢复的同时S2挂了，并且S5率先成为了候选者。S5会成为Leader吗？</li>
+<li>如果S5成为Leader，必定会将其他节点的日志删除，因为raft是Leader强一致性算法。</li>
+<li>S5不会成为Leader，因为发起Request vote 时候会检查term或index，如果候选者比自己的小，则拒绝。</li>
+<li>先比较term值，如果term值相同再比较index值。</li>
+</ul>
+<h2 id="10-关于term任期">10 关于Term（任期）</h2>
+<ul>
+<li>Term是一个数字</li>
+<li>如果率先成为Candidator，就将自己的Term+1</li>
+<li>如果成为了Leader，就将自己的Term发送给Follower</li>
+<li>如果Candidator或Leader发现自己的Term比别人的小，则退为Follower</li>
+<li>如果节点收到的Term比自己小，直接拒绝请求。</li>
+</ul>
+<h2 id="11-关于投票原则">11 关于投票原则</h2>
+<ul>
+<li>谁先来，票就先投给谁</li>
+<li>收到大多数票才能成为leader</li>
+</ul>
+
+              </div>
+              <div class="toc-container">
+                <ul class="markdownIt-TOC">
+<li>
+<ul>
+<li><a href="#%E7%AE%80%E7%9F%AD%E6%80%BB%E7%BB%93">简短总结</a>
+<ul>
+<li><a href="#%E8%A7%92%E8%89%B2%E4%BB%A5%E5%8F%8A%E8%A7%92%E8%89%B2%E4%B9%8B%E9%97%B4%E7%9A%84%E8%BD%AC%E6%8D%A2">角色以及角色之间的转换</a></li>
+<li><a href="#%E9%80%89%E4%B8%BB">选主</a></li>
+<li><a href="#%E5%A4%84%E7%90%86%E5%AE%A2%E6%88%B7%E7%AB%AF%E8%AF%B7%E6%B1%82">处理客户端请求</a></li>
+</ul>
+</li>
+<li><a href="#1-raft%E6%98%AF%E4%BB%80%E4%B9%88">1 Raft是什么？</a></li>
+<li><a href="#2-%E5%90%8D%E8%AF%8D">2 名词</a></li>
+<li><a href="#3-%E8%A7%92%E8%89%B2">3 角色</a></li>
+<li><a href="#4-%E7%AB%9E%E9%80%89leader%E7%9A%84%E8%BF%87%E7%A8%8B">4 竞选Leader的过程</a></li>
+<li><a href="#5-%E9%87%8D%E6%96%B0%E9%80%89%E4%B8%BE%E8%BF%87%E7%A8%8B">5 重新选举过程</a></li>
+<li><a href="#6-%E6%8A%95%E7%A5%A8%E5%88%86%E8%A3%82%E6%83%85%E5%86%B5">6 投票分裂情况</a></li>
+<li><a href="#7-raft%E6%97%A5%E5%BF%97%E5%A4%8D%E5%88%B6%E8%BF%87%E7%A8%8B">7 Raft日志复制过程</a></li>
+<li><a href="#8-%E4%BF%AE%E5%A4%8D%E4%B8%8D%E4%B8%80%E8%87%B4%E6%97%A5%E5%BF%97%E7%9A%84%E8%BF%87%E7%A8%8B">8 修复不一致日志的过程</a></li>
+<li><a href="#9-raft%E7%AE%97%E6%B3%95%E7%9A%84%E5%AE%89%E5%85%A8%E6%80%A7">9 raft算法的安全性</a></li>
+<li><a href="#10-%E5%85%B3%E4%BA%8Eterm%E4%BB%BB%E6%9C%9F">10 关于Term（任期）</a></li>
+<li><a href="#11-%E5%85%B3%E4%BA%8E%E6%8A%95%E7%A5%A8%E5%8E%9F%E5%88%99">11 关于投票原则</a></li>
+</ul>
+</li>
+</ul>
+
+              </div>
+            </div>
+          </article>
+        </div>
+
+        
+          <div class="next-post">
+            <div class="next">下一篇</div>
+            <a href="https://tong-hao.github.io/mrElY8CRQ/">
+              <h3 class="post-title">
+                plato系统的pull与push模式
+              </h3>
+            </a>
+          </div>
+        
+
+        
+          
+            <link rel="stylesheet" href="https://unpkg.com/gitalk/dist/gitalk.css">
+<script src="https://unpkg.com/gitalk/dist/gitalk.min.js"></script>
+
+<div id="gitalk-container"></div>
+
+<script>
+
+  var gitalk = new Gitalk({
+    clientID: 'Ov23lieprxymzcVgZ0O1',
+    clientSecret: 'a8031fbd8318b584d517fd25242e7c8bdaf1c896',
+    repo: 'tong-hao.github.io',
+    owner: 'tong-hao',
+    admin: ['tong-hao'],
+    id: (location.pathname).substring(0, 49),      // Ensure uniqueness and length less than 50
+    distractionFreeMode: false  // Facebook-like distraction free mode
+  })
+
+  gitalk.render('gitalk-container')
+
+</script>
+
+          
+
+          
+        
+
+        <div class="site-footer">
+  
+  <a class="rss" href="https://tong-hao.github.io/atom.xml" target="_blank">
+    <i class="ri-rss-line"></i> RSS
+  </a>
+</div>
+
+      </div>
+    </div>
+
+    <script>
+      hljs.initHighlightingOnLoad()
+
+      let mainNavLinks = document.querySelectorAll(".markdownIt-TOC a");
+
+      // This should probably be throttled.
+      // Especially because it triggers during smooth scrolling.
+      // https://lodash.com/docs/4.17.10#throttle
+      // You could do like...
+      // window.addEventListener("scroll", () => {
+      //    _.throttle(doThatStuff, 100);
+      // });
+      // Only not doing it here to keep this Pen dependency-free.
+
+      window.addEventListener("scroll", event => {
+        let fromTop = window.scrollY;
+
+        mainNavLinks.forEach((link, index) => {
+          let section = document.getElementById(decodeURI(link.hash).substring(1));
+          let nextSection = null
+          if (mainNavLinks[index + 1]) {
+            nextSection = document.getElementById(decodeURI(mainNavLinks[index + 1].hash).substring(1));
+          }
+          if (section.offsetTop <= fromTop) {
+            if (nextSection) {
+              if (nextSection.offsetTop > fromTop) {
+                link.classList.add("current");
+              } else {
+                link.classList.remove("current");    
+              }
+            } else {
+              link.classList.add("current");
+            }
+          } else {
+            link.classList.remove("current");
+          }
+        });
+      });
+
+    </script>
+  </body>
+</html>

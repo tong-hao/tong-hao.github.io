@@ -1,0 +1,286 @@
+<html>
+  <head>
+    <meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>nebula-存储层-存储格式 | Caton Blog</title>
+<link rel="shortcut icon" href="https://tong-hao.github.io/favicon.ico?v=1753690290554">
+<link href="https://cdn.jsdelivr.net/npm/remixicon@2.3.0/fonts/remixicon.css" rel="stylesheet">
+<link rel="stylesheet" href="https://tong-hao.github.io/styles/main.css">
+<link rel="alternate" type="application/atom+xml" title="nebula-存储层-存储格式 | Caton Blog - Atom Feed" href="https://tong-hao.github.io/atom.xml">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Droid+Serif:400,700">
+
+
+
+    <meta name="description" content="1）点的存储格式：
+
+
+点的PartitionId是通过hash(vid)%parts决定的
+
+例子：vid为50的点存在两个tag
+
+2）边的存储格式：
+
+
+边的PartitionId是通过hash(srcVertexId)%parts决..." />
+    <meta name="keywords" content="nebula,图数据库" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+    <script src="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.5.1/build/highlight.min.js"></script>
+  </head>
+  <body>
+    <div class="main">
+      <div class="main-content">
+        <div class="site-header">
+  <a href="https://tong-hao.github.io">
+  <img class="avatar" src="https://tong-hao.github.io/images/avatar.png?v=1753690290554" alt="">
+  </a>
+  <h1 class="site-title">
+    Caton Blog
+  </h1>
+  <p class="site-description">
+    ✍️一个专注于数据库的博客
+  </p>
+  <div class="menu-container">
+    
+      
+        <a href="/" class="menu">
+          首页
+        </a>
+      
+    
+      
+        <a href="/about" class="menu">
+          关于
+        </a>
+      
+    
+      
+        <a href="/tags" class="menu">
+          标签
+        </a>
+      
+    
+      
+        <a href="/pg" class="menu">
+          #pg
+        </a>
+      
+    
+      
+        <a href="/db" class="menu">
+          #数据库内核
+        </a>
+      
+    
+      
+        <a href="/graph-db" class="menu">
+          #图数据库
+        </a>
+      
+    
+      
+        <a href="/creation" class="menu">
+          #个人作品
+        </a>
+      
+    
+      
+        <a href="/cpp" class="menu">
+          #c++
+        </a>
+      
+    
+  </div>
+  <div class="social-container">
+    
+      
+        <a href="https://github.com/tong-hao" target="_blank">
+          <i class="ri-github-line"></i>
+        </a>
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+  </div>
+</div>
+
+        <div class="post-detail">
+          <article class="post">
+            <h2 class="post-title">
+              nebula-存储层-存储格式
+            </h2>
+            <div class="post-info">
+              <span>
+                2025-07-28
+              </span>
+              <span>
+                1 min read
+              </span>
+              
+                <a href="https://tong-hao.github.io/TyVl4PGI8S/" class="post-tag">
+                  # nebula
+                </a>
+              
+                <a href="https://tong-hao.github.io/graph-db/" class="post-tag">
+                  # 图数据库
+                </a>
+              
+            </div>
+            
+            <div class="post-content-wrapper">
+              <div class="post-content" v-pre>
+                <h2 id="1点的存储格式">1）点的存储格式：</h2>
+<figure data-type="image" tabindex="1"><img src="https://oscimg.oschina.net/oscnet/up-9cf8025c50fce1a348e4c93e990a80b3455.png" alt="" loading="lazy"></figure>
+<ul>
+<li>点的PartitionId是通过<code>hash(vid)%parts</code>决定的</li>
+</ul>
+<p>例子：vid为50的点存在两个tag<br>
+<img src="https://oscimg.oschina.net/oscnet/up-51192c519b07a2ff4ba00b39ba9b90bf120.png" alt="" loading="lazy"></p>
+<h2 id="2边的存储格式">2）边的存储格式：</h2>
+<figure data-type="image" tabindex="2"><img src="https://oscimg.oschina.net/oscnet/up-25135a07713cc6b652b73ecd4731d8a93ef.png" alt="" loading="lazy"></figure>
+<ul>
+<li>边的PartitionId是通过<code>hash(srcVertexId)%parts</code>决定的</li>
+<li>edge type，正向边是正数，反向边是负数</li>
+</ul>
+<p>注意：一条边需要在存储上存两次，一条正向边一条反向边</p>
+<h2 id="3点索引的存储格式">3）点索引的存储格式：</h2>
+<figure data-type="image" tabindex="3"><img src="https://oscimg.oschina.net/oscnet/up-36d4069ce9791b79e4a8518a3d6f010eb4f.png" alt="" loading="lazy"></figure>
+<ul>
+<li>PartitionId: 与该点在同一个part上</li>
+<li>IndexId：索引schema ID，通过它可以获取到TagId。</li>
+<li>Index binary：属性值的字节编码</li>
+<li>VertexId：顶点ID</li>
+</ul>
+<p>注意：要扫所有的part</p>
+<p>例子：<br>
+<img src="https://oscimg.oschina.net/oscnet/up-a4fd2ed463d0303e8ff4df4c3187b62eeb2.png" alt="" loading="lazy"></p>
+<h2 id="4边索引的存储格式">4）边索引的存储格式：</h2>
+<figure data-type="image" tabindex="4"><img src="https://oscimg.oschina.net/oscnet/up-aa992a8280c8a7bef85ea4bae2286d0fbcb.png" alt="" loading="lazy"></figure>
+<ul>
+<li>PartitionId: 与该src在同一个part上</li>
+</ul>
+<h2 id="5index-binary存储结构">5）Index binary存储结构</h2>
+<ul>
+<li>Index binary 区分定长字段和不定长字段</li>
+<li>int、double、bool 为定长字段，string 则为不定长字段</li>
+<li>为了精确地定位不定长字段，在 index binary 末尾用 int32 记录了不定长字段的长度。</li>
+</ul>
+<p>例子：<br>
+假如索引列 c1、c2、c3 某一行对应的 property 值分别为：23、&quot;abc&quot;、&quot;here&quot;<br>
+<img src="https://oscimg.oschina.net/oscnet/up-e572425d738f599277c69d4617460d38273.png" alt="" loading="lazy"></p>
+
+              </div>
+              <div class="toc-container">
+                <ul class="markdownIt-TOC">
+<li>
+<ul>
+<li><a href="#1%E7%82%B9%E7%9A%84%E5%AD%98%E5%82%A8%E6%A0%BC%E5%BC%8F">1）点的存储格式：</a></li>
+<li><a href="#2%E8%BE%B9%E7%9A%84%E5%AD%98%E5%82%A8%E6%A0%BC%E5%BC%8F">2）边的存储格式：</a></li>
+<li><a href="#3%E7%82%B9%E7%B4%A2%E5%BC%95%E7%9A%84%E5%AD%98%E5%82%A8%E6%A0%BC%E5%BC%8F">3）点索引的存储格式：</a></li>
+<li><a href="#4%E8%BE%B9%E7%B4%A2%E5%BC%95%E7%9A%84%E5%AD%98%E5%82%A8%E6%A0%BC%E5%BC%8F">4）边索引的存储格式：</a></li>
+<li><a href="#5index-binary%E5%AD%98%E5%82%A8%E7%BB%93%E6%9E%84">5）Index binary存储结构</a></li>
+</ul>
+</li>
+</ul>
+
+              </div>
+            </div>
+          </article>
+        </div>
+
+        
+          <div class="next-post">
+            <div class="next">下一篇</div>
+            <a href="https://tong-hao.github.io/s2KZWYRSSQ/">
+              <h3 class="post-title">
+                nebula-元数据-存储格式
+              </h3>
+            </a>
+          </div>
+        
+
+        
+          
+            <link rel="stylesheet" href="https://unpkg.com/gitalk/dist/gitalk.css">
+<script src="https://unpkg.com/gitalk/dist/gitalk.min.js"></script>
+
+<div id="gitalk-container"></div>
+
+<script>
+
+  var gitalk = new Gitalk({
+    clientID: 'Ov23lieprxymzcVgZ0O1',
+    clientSecret: 'a8031fbd8318b584d517fd25242e7c8bdaf1c896',
+    repo: 'tong-hao.github.io',
+    owner: 'tong-hao',
+    admin: ['tong-hao'],
+    id: (location.pathname).substring(0, 49),      // Ensure uniqueness and length less than 50
+    distractionFreeMode: false  // Facebook-like distraction free mode
+  })
+
+  gitalk.render('gitalk-container')
+
+</script>
+
+          
+
+          
+        
+
+        <div class="site-footer">
+  
+  <a class="rss" href="https://tong-hao.github.io/atom.xml" target="_blank">
+    <i class="ri-rss-line"></i> RSS
+  </a>
+</div>
+
+      </div>
+    </div>
+
+    <script>
+      hljs.initHighlightingOnLoad()
+
+      let mainNavLinks = document.querySelectorAll(".markdownIt-TOC a");
+
+      // This should probably be throttled.
+      // Especially because it triggers during smooth scrolling.
+      // https://lodash.com/docs/4.17.10#throttle
+      // You could do like...
+      // window.addEventListener("scroll", () => {
+      //    _.throttle(doThatStuff, 100);
+      // });
+      // Only not doing it here to keep this Pen dependency-free.
+
+      window.addEventListener("scroll", event => {
+        let fromTop = window.scrollY;
+
+        mainNavLinks.forEach((link, index) => {
+          let section = document.getElementById(decodeURI(link.hash).substring(1));
+          let nextSection = null
+          if (mainNavLinks[index + 1]) {
+            nextSection = document.getElementById(decodeURI(mainNavLinks[index + 1].hash).substring(1));
+          }
+          if (section.offsetTop <= fromTop) {
+            if (nextSection) {
+              if (nextSection.offsetTop > fromTop) {
+                link.classList.add("current");
+              } else {
+                link.classList.remove("current");    
+              }
+            } else {
+              link.classList.add("current");
+            }
+          } else {
+            link.classList.remove("current");
+          }
+        });
+      });
+
+    </script>
+  </body>
+</html>

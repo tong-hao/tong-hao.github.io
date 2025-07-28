@@ -1,0 +1,559 @@
+<html>
+  <head>
+    <meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>velox 入门 | Caton Blog</title>
+<link rel="shortcut icon" href="https://tong-hao.github.io/favicon.ico?v=1753690290554">
+<link href="https://cdn.jsdelivr.net/npm/remixicon@2.3.0/fonts/remixicon.css" rel="stylesheet">
+<link rel="stylesheet" href="https://tong-hao.github.io/styles/main.css">
+<link rel="alternate" type="application/atom+xml" title="velox 入门 | Caton Blog - Atom Feed" href="https://tong-hao.github.io/atom.xml">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Droid+Serif:400,700">
+
+
+
+    <meta name="description" content="向量
+velox使用列式表达向量。
+通过 makeFlatVector 创建向量：
+auto a = makeFlatVector&lt;int64_t&gt;({0, 1, 2, 3, 4, 5, 6});
+auto b = makeFl..." />
+    <meta name="keywords" content="数据库" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+    <script src="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.5.1/build/highlight.min.js"></script>
+  </head>
+  <body>
+    <div class="main">
+      <div class="main-content">
+        <div class="site-header">
+  <a href="https://tong-hao.github.io">
+  <img class="avatar" src="https://tong-hao.github.io/images/avatar.png?v=1753690290554" alt="">
+  </a>
+  <h1 class="site-title">
+    Caton Blog
+  </h1>
+  <p class="site-description">
+    ✍️一个专注于数据库的博客
+  </p>
+  <div class="menu-container">
+    
+      
+        <a href="/" class="menu">
+          首页
+        </a>
+      
+    
+      
+        <a href="/about" class="menu">
+          关于
+        </a>
+      
+    
+      
+        <a href="/tags" class="menu">
+          标签
+        </a>
+      
+    
+      
+        <a href="/pg" class="menu">
+          #pg
+        </a>
+      
+    
+      
+        <a href="/db" class="menu">
+          #数据库内核
+        </a>
+      
+    
+      
+        <a href="/graph-db" class="menu">
+          #图数据库
+        </a>
+      
+    
+      
+        <a href="/creation" class="menu">
+          #个人作品
+        </a>
+      
+    
+      
+        <a href="/cpp" class="menu">
+          #c++
+        </a>
+      
+    
+  </div>
+  <div class="social-container">
+    
+      
+        <a href="https://github.com/tong-hao" target="_blank">
+          <i class="ri-github-line"></i>
+        </a>
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+  </div>
+</div>
+
+        <div class="post-detail">
+          <article class="post">
+            <h2 class="post-title">
+              velox 入门
+            </h2>
+            <div class="post-info">
+              <span>
+                2025-07-28
+              </span>
+              <span>
+                10 min read
+              </span>
+              
+                <a href="https://tong-hao.github.io/db/" class="post-tag">
+                  # 数据库
+                </a>
+              
+            </div>
+            
+            <div class="post-content-wrapper">
+              <div class="post-content" v-pre>
+                <h2 id="向量">向量</h2>
+<p>velox使用列式表达向量。</p>
+<p>通过 makeFlatVector 创建向量：</p>
+<pre><code class="language-c++">auto a = makeFlatVector&lt;int64_t&gt;({0, 1, 2, 3, 4, 5, 6});
+auto b = makeFlatVector&lt;int64_t&gt;({0, 5, 10, 15, 20, 25, 30});
+auto dow = makeFlatVector&lt;std::string&gt;({&quot;monday&quot;, &quot;tuesday&quot;, &quot;wednesday&quot;, &quot;thursday&quot;, &quot;friday&quot;, &quot;saturday&quot;, &quot;sunday&quot;});
+</code></pre>
+<p>将 a、b、dow组织成一张表：</p>
+<pre><code class="language-c++">auto data = makeRowVector({&quot;a&quot;, &quot;b&quot;, &quot;dow&quot;}, {a, b, dow});
+
+std::cout &lt;&lt; data-&gt;toString() &lt;&lt; std::endl;
+std::cout &lt;&lt; data-&gt;toString(0, data-&gt;size()) &lt;&lt; std::endl;
+</code></pre>
+<p>执行结果:</p>
+<pre><code> &gt; [ROW ROW&lt;a:BIGINT,b:BIGINT,dow:VARCHAR&gt;: 7 elements, no nulls]
+0: {0, 0, monday}
+1: {1, 5, tuesday}
+2: {2, 10, wednesday}
+3: {3, 15, thursday}
+4: {4, 20, friday}
+5: {5, 25, saturday}
+6: {6, 30, sunday}
+</code></pre>
+<p>说明：</p>
+<ul>
+<li><code>{&quot;a&quot;, &quot;b&quot;, &quot;dow&quot;}</code> 为列的字段名</li>
+</ul>
+<h2 id="表达式">表达式</h2>
+<h3 id="表达式-ab">表达式 <code>a+b</code></h3>
+<pre><code class="language-c++">// 编译表达树
+auto exprSet = compileExpression(&quot;a + b&quot;, asRowType(data-&gt;type()));
+std::cout &lt;&lt; exprSet-&gt;toString(false /*compact*/) &lt;&lt; std::endl;
+
+// 计算表达树
+auto c = evaluate(*exprSet, data);
+
+// 构建一张abc表
+auto abc = makeRowVector({&quot;a&quot;, &quot;b&quot;, &quot;c&quot;}, {a, b, c});
+std::cout &lt;&lt; abc-&gt;toString() &lt;&lt; std::endl;
+std::cout &lt;&lt; abc-&gt;toString(0, c-&gt;size()) &lt;&lt; std::endl;
+</code></pre>
+<p>表达树结构如下：</p>
+<pre><code>plus -&gt; BIGINT [#1]
+   a -&gt; BIGINT [#2]
+   b -&gt; BIGINT [#3]
+</code></pre>
+<p>abc表的结果如下：</p>
+<pre><code>&gt; [ROW ROW&lt;a:BIGINT,b:BIGINT,c:BIGINT&gt;: 7 elements, no nulls]
+0: {0, 0, 0}
+1: {1, 5, 6}
+2: {2, 10, 12}
+3: {3, 15, 18}
+4: {4, 20, 24}
+5: {5, 25, 30}
+6: {6, 30, 36}
+</code></pre>
+<h3 id="表达式2-a-b-3">表达式<code>2 * a + b % 3</code></h3>
+<pre><code class="language-c++">// 编译表达式
+exprSet = compileExpression(&quot;2 * a + b % 3&quot;, asRowType(data-&gt;type()));
+std::cout &lt;&lt; exprSet-&gt;toString(false /*compact*/) &lt;&lt; std::endl;
+
+// 计算表达式的结果为d
+auto d = evaluate(*exprSet, data);
+
+// 构建一张abd表
+auto abd = makeRowVector({&quot;a&quot;, &quot;b&quot;, &quot;d&quot;}, {a, b, d});
+std::cout &lt;&lt; abd-&gt;toString() &lt;&lt; std::endl;
+std::cout &lt;&lt; abd-&gt;toString(0, d-&gt;size()) &lt;&lt; std::endl;
+</code></pre>
+<p>树的结构：</p>
+<pre><code>plus -&gt; BIGINT [#1]
+   multiply -&gt; BIGINT [#2]
+      2:BIGINT -&gt; BIGINT [#3]
+      a -&gt; BIGINT [#4]
+   mod -&gt; BIGINT [#5]
+      b -&gt; BIGINT [#6]
+      3:BIGINT -&gt; BIGINT [#7]
+</code></pre>
+<p>abd表的结果如下：</p>
+<pre><code>&gt; [ROW ROW&lt;a:BIGINT,b:BIGINT,d:BIGINT&gt;: 7 elements, no nulls]
+0: {0, 0, 0}
+1: {1, 5, 4}
+2: {2, 10, 5}
+3: {3, 15, 6}
+4: {4, 20, 10}
+5: {5, 25, 11}
+6: {6, 30, 12}
+</code></pre>
+<h3 id="表达式-concatuppersubstrdow-1-1-substrdow-2-2">表达式 <code>concat(upper(substr(dow, 1, 1)), substr(dow, 2, 2))</code></h3>
+<pre><code class="language-c++">exprSet = compileExpression(
+      &quot;concat(upper(substr(dow, 1, 1)), substr(dow, 2, 2))&quot;,
+      asRowType(data-&gt;type()));
+std::cout &lt;&lt; exprSet-&gt;toString(false /*compact*/) &lt;&lt; std::endl;
+
+auto shortDow = evaluate(*exprSet, data);
+std::cout &lt;&lt; shortDow-&gt;toString() &lt;&lt; std::endl;
+std::cout &lt;&lt; shortDow-&gt;toString(0, shortDow-&gt;size()) &lt;&lt; std::endl;
+</code></pre>
+<ul>
+<li>substr(dow, 1, 1)  从dow列的第1个位置开始，取1个字符</li>
+<li>substr(dow, 2, 2) 从dow列的第2个位置开始，取2个字符</li>
+<li>upper 转大写</li>
+<li>concat 拼接两个字符串</li>
+<li>evaluate 计算表达式</li>
+</ul>
+<p>树的结构如下：</p>
+<pre><code>concat -&gt; VARCHAR [#1]
+   upper -&gt; VARCHAR [#2]
+      substr -&gt; VARCHAR [#3]
+         dow -&gt; VARCHAR [#4]
+         1:BIGINT -&gt; BIGINT [#5]
+         1:BIGINT -&gt; BIGINT [CSE #5]
+   substr -&gt; VARCHAR [#6]
+      dow -&gt; VARCHAR [CSE #4]
+      2:BIGINT -&gt; BIGINT [#7]
+      2:BIGINT -&gt; BIGINT [CSE #7]
+</code></pre>
+<p>执行结果如下：</p>
+<pre><code>&gt; [FLAT VARCHAR: 7 elements, no nulls]
+0: Mon
+1: Tue
+2: Wed
+3: Thu
+4: Fri
+5: Sat
+6: Sun
+</code></pre>
+<h2 id="查询">查询</h2>
+<h3 id="聚合">聚合</h3>
+<pre><code class="language-cpp">auto plan = PlanBuilder()
+              .values({data})
+              .singleAggregation(
+                  {},
+                  {&quot;sum(a) AS sum_a&quot;,
+                   &quot;avg(a) AS avg_a&quot;,
+                   &quot;sum(b) AS sum_b&quot;,
+                   &quot;avg(b) AS avg_b&quot;})
+              .planNode();
+
+auto sumAvg = getResults(plan);
+
+std::cout &lt;&lt; sumAvg-&gt;toString() &lt;&lt; std::endl;
+std::cout &lt;&lt; sumAvg-&gt;toString(0, sumAvg-&gt;size()) &lt;&lt; std::endl;
+</code></pre>
+<ul>
+<li><code>PlanBuilder</code> 构造查询计划</li>
+<li><code>PlanBuilder&amp; singleAggregation(std::vector&lt;std::string&gt; groupingKeys,std::vector&lt;std::string&gt; aggregates);</code>  构建聚合，当前没有指定group key</li>
+<li><code>getResults</code> 获取plan的执行结果</li>
+</ul>
+<p>运行结果：</p>
+<pre><code>&gt; [ROW ROW&lt;sum_a:BIGINT,avg_a:DOUBLE,sum_b:BIGINT,avg_b:DOUBLE&gt;: 1 elements, no nulls]
+0: {15, 2.5, 75, 12.5}
+</code></pre>
+<h3 id="排序">排序</h3>
+<pre><code class="language-cpp">plan = PlanBuilder()
+    .values({data})
+    .orderBy({&quot;a DESC&quot;}, false /*isPartial*/)
+    .planNode();
+
+auto sorted = getResults(plan);
+std::cout &lt;&lt; sorted-&gt;toString() &lt;&lt; std::endl;
+std::cout &lt;&lt; sorted-&gt;toString(0, sorted-&gt;size()) &lt;&lt; std::endl;
+</code></pre>
+<ul>
+<li><code>orderBy(..., true)</code> 表示局部有序，常用于分布式执行的中间阶段。</li>
+<li><code>orderBy(..., false)</code> 表示全局排序。</li>
+</ul>
+<p>运行结果：</p>
+<pre><code>&gt; [ROW ROW&lt;a:BIGINT,b:BIGINT&gt;: 6 elements, no nulls]
+0: {5, 25}
+1: {4, 20}
+2: {3, 15}
+3: {2, 10}
+4: {1, 5}
+5: {0, 0}
+</code></pre>
+<h3 id="topn">TopN</h3>
+<pre><code class="language-cpp">plan = PlanBuilder()
+    .values({data})
+    .topN({&quot;a DESC&quot;}, 3, false /*isPartial*/)
+    .planNode();
+
+auto top3 = getResults(plan);
+std::cout &lt;&lt; top5-&gt;toString() &lt;&lt; std::endl;
+std::cout &lt;&lt; top5-&gt;toString(0, top3-&gt;size()) &lt;&lt; std::endl;
+</code></pre>
+<p>topN的三个参数：</p>
+<ul>
+<li><code>const std::vector&lt;std::string&gt;&amp; sortingKeys</code> 排序的Key</li>
+<li><code>int32_t count</code> 取前几个</li>
+<li><code>bool isPartial</code> false 代表全局有序，true代表局部有序</li>
+</ul>
+<p>运行结果：</p>
+<pre><code>&gt; [ROW ROW&lt;a:BIGINT,b:BIGINT&gt;: 3 elements, no nulls]
+0: {5, 25}
+1: {4, 20}
+2: {3, 15}
+</code></pre>
+<h3 id="过滤">过滤</h3>
+<pre><code class="language-cpp">plan = PlanBuilder().values({data}).filter(&quot;a % 2 == 0&quot;).planNode();
+
+auto evenA = AssertQueryBuilder(plan).copyResults(pool());
+std::cout &lt;&lt; std::endl &lt;&lt; &quot;&gt; rows with even values of 'a': &quot; &lt;&lt; evenA-&gt;toString() &lt;&lt; std::endl;
+std::cout &lt;&lt; evenA-&gt;toString(0, evenA-&gt;size()) &lt;&lt; std::endl;
+</code></pre>
+<ul>
+<li><code>filter(&quot;a % 2 == 0&quot;)</code> 这里的a是a列</li>
+</ul>
+<p>运行结果：</p>
+<pre><code>&gt; [ROW ROW&lt;a:BIGINT,b:BIGINT,dow:VARCHAR&gt;: 4 elements, no nulls]
+0: {0, 0, monday}
+1: {2, 10, wednesday}
+2: {4, 20, friday}
+3: {6, 30, sunday}
+</code></pre>
+<h2 id="connectors">Connectors</h2>
+<pre><code class="language-cpp">plan = PlanBuilder()
+           .tpchTableScan(
+               tpch::Table::TBL_NATION,
+               {&quot;n_nationkey&quot;, &quot;n_name&quot;},
+               1 /*scaleFactor*/)
+           .planNode();
+
+auto nations = AssertQueryBuilder(plan).split(makeTpchSplit()).copyResults(pool());
+
+std::cout &lt;&lt; std::endl
+          &lt;&lt; &quot;&gt; first 10 rows from TPC-H nation table: &quot;
+          &lt;&lt; nations-&gt;toString() &lt;&lt; std::endl;
+std::cout &lt;&lt; nations-&gt;toString(0, 10) &lt;&lt; std::endl;
+</code></pre>
+<ul>
+<li>tpchTableScan的三个参数：
+<ul>
+<li><code>tpch::Table table</code>  是表的枚举值，包含了：<code>TBL_NATION</code>, <code>TBL_LINEITEM</code>, <code>TBL_CUSTOMER</code> 等</li>
+<li><code>std::vector&lt;std::string&gt; columns</code> 要扫描的列名</li>
+<li><code>double scaleFactor</code> 数据规模，1表示1GB的数据</li>
+</ul>
+</li>
+<li><code>pool()</code> 表示使用默认的内存池</li>
+<li><code>split</code> 用于指定数据块</li>
+<li><code>makeTpchSplit</code> 生成数据块</li>
+<li><code>nations-&gt;toString(0, 10)</code> 前10行</li>
+</ul>
+<p>运行结果：</p>
+<pre><code>0: {0, ALGERIA}
+1: {1, ARGENTINA}
+2: {2, BRAZIL}
+3: {3, CANADA}
+4: {4, EGYPT}
+5: {5, ETHIOPIA}
+6: {6, FRANCE}
+7: {7, GERMANY}
+8: {8, INDIA}
+9: {9, INDONESIA}
+</code></pre>
+<h3 id="joins">Joins</h3>
+<p>统计每个区域国家的数量，并按照区域名称排序。</p>
+<pre><code class="language-cpp">auto planNodeIdGenerator = std::make_shared&lt;PlanNodeIdGenerator&gt;();
+core::PlanNodeId nationScanId;
+core::PlanNodeId regionScanId;
+plan = PlanBuilder(planNodeIdGenerator)
+           .tpchTableScan(
+               tpch::Table::TBL_NATION, {&quot;n_regionkey&quot;}, 1 /*scaleFactor*/)
+           .capturePlanNodeId(nationScanId)
+           .hashJoin(
+               {&quot;n_regionkey&quot;},
+               {&quot;r_regionkey&quot;},
+               PlanBuilder(planNodeIdGenerator)
+                   .tpchTableScan(
+                       tpch::Table::TBL_REGION,
+                       {&quot;r_regionkey&quot;, &quot;r_name&quot;},
+                       1 /*scaleFactor*/)
+                   .capturePlanNodeId(regionScanId)
+                   .planNode(),
+               &quot;&quot;, // extra filter
+               {&quot;r_name&quot;})
+           .singleAggregation({&quot;r_name&quot;}, {&quot;count(1) as nation_cnt&quot;})
+           .orderBy({&quot;r_name&quot;}, false)
+           .planNode();
+
+auto nationCnt = AssertQueryBuilder(plan)
+                     .split(nationScanId, makeTpchSplit())
+                     .split(regionScanId, makeTpchSplit())
+                     .copyResults(pool());
+
+std::cout &lt;&lt; std::endl
+          &lt;&lt; &quot;&gt; number of nations per region in TPC-H: &quot;
+          &lt;&lt; nationCnt-&gt;toString() &lt;&lt; std::endl;
+std::cout &lt;&lt; nationCnt-&gt;toString(0, 10) &lt;&lt; std::endl;
+</code></pre>
+<p>hashJoin函数：</p>
+<pre><code>PlanBuilder::hashJoin(
+    const std::vector&lt;std::string&gt;&amp; leftKeys,   // 左表的Join Key
+    const std::vector&lt;std::string&gt;&amp; rightKeys,  // 右表的Join Key
+    std::shared_ptr&lt;core::PlanNode&gt; build,      // 用来构造右表的子计划
+    const std::string&amp; filter,                  // 过滤条件
+    const std::vector&lt;std::string&gt;&amp; outputBuildColumns // 指定要输出的右表字段名，左表字段默认全部输出
+)
+</code></pre>
+<p>运行结果：</p>
+<pre><code>0: {AFRICA, 5}
+1: {AMERICA, 5}
+2: {ASIA, 5}
+3: {EUROPE, 5}
+4: {MIDDLE EAST, 5}
+</code></pre>
+
+              </div>
+              <div class="toc-container">
+                <ul class="markdownIt-TOC">
+<li>
+<ul>
+<li><a href="#%E5%90%91%E9%87%8F">向量</a></li>
+<li><a href="#%E8%A1%A8%E8%BE%BE%E5%BC%8F">表达式</a>
+<ul>
+<li><a href="#%E8%A1%A8%E8%BE%BE%E5%BC%8F-ab">表达式 <code>a+b</code></a></li>
+<li><a href="#%E8%A1%A8%E8%BE%BE%E5%BC%8F2-a-b-3">表达式<code>2 * a + b % 3</code></a></li>
+<li><a href="#%E8%A1%A8%E8%BE%BE%E5%BC%8F-concatuppersubstrdow-1-1-substrdow-2-2">表达式 <code>concat(upper(substr(dow, 1, 1)), substr(dow, 2, 2))</code></a></li>
+</ul>
+</li>
+<li><a href="#%E6%9F%A5%E8%AF%A2">查询</a>
+<ul>
+<li><a href="#%E8%81%9A%E5%90%88">聚合</a></li>
+<li><a href="#%E6%8E%92%E5%BA%8F">排序</a></li>
+<li><a href="#topn">TopN</a></li>
+<li><a href="#%E8%BF%87%E6%BB%A4">过滤</a></li>
+</ul>
+</li>
+<li><a href="#connectors">Connectors</a>
+<ul>
+<li><a href="#joins">Joins</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+              </div>
+            </div>
+          </article>
+        </div>
+
+        
+          <div class="next-post">
+            <div class="next">下一篇</div>
+            <a href="https://tong-hao.github.io/xgTlqjMohg/">
+              <h3 class="post-title">
+                folly知识点总结
+              </h3>
+            </a>
+          </div>
+        
+
+        
+          
+            <link rel="stylesheet" href="https://unpkg.com/gitalk/dist/gitalk.css">
+<script src="https://unpkg.com/gitalk/dist/gitalk.min.js"></script>
+
+<div id="gitalk-container"></div>
+
+<script>
+
+  var gitalk = new Gitalk({
+    clientID: 'Ov23lieprxymzcVgZ0O1',
+    clientSecret: 'a8031fbd8318b584d517fd25242e7c8bdaf1c896',
+    repo: 'tong-hao.github.io',
+    owner: 'tong-hao',
+    admin: ['tong-hao'],
+    id: (location.pathname).substring(0, 49),      // Ensure uniqueness and length less than 50
+    distractionFreeMode: false  // Facebook-like distraction free mode
+  })
+
+  gitalk.render('gitalk-container')
+
+</script>
+
+          
+
+          
+        
+
+        <div class="site-footer">
+  
+  <a class="rss" href="https://tong-hao.github.io/atom.xml" target="_blank">
+    <i class="ri-rss-line"></i> RSS
+  </a>
+</div>
+
+      </div>
+    </div>
+
+    <script>
+      hljs.initHighlightingOnLoad()
+
+      let mainNavLinks = document.querySelectorAll(".markdownIt-TOC a");
+
+      // This should probably be throttled.
+      // Especially because it triggers during smooth scrolling.
+      // https://lodash.com/docs/4.17.10#throttle
+      // You could do like...
+      // window.addEventListener("scroll", () => {
+      //    _.throttle(doThatStuff, 100);
+      // });
+      // Only not doing it here to keep this Pen dependency-free.
+
+      window.addEventListener("scroll", event => {
+        let fromTop = window.scrollY;
+
+        mainNavLinks.forEach((link, index) => {
+          let section = document.getElementById(decodeURI(link.hash).substring(1));
+          let nextSection = null
+          if (mainNavLinks[index + 1]) {
+            nextSection = document.getElementById(decodeURI(mainNavLinks[index + 1].hash).substring(1));
+          }
+          if (section.offsetTop <= fromTop) {
+            if (nextSection) {
+              if (nextSection.offsetTop > fromTop) {
+                link.classList.add("current");
+              } else {
+                link.classList.remove("current");    
+              }
+            } else {
+              link.classList.add("current");
+            }
+          } else {
+            link.classList.remove("current");
+          }
+        });
+      });
+
+    </script>
+  </body>
+</html>
